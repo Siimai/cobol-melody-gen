@@ -41,7 +41,7 @@
       *> --- Scale table (mirrors WS-SCALE-TABLE in music_types.cpy) -
        01  LS-SCALE-TABLE.
            05  LS-SC-COUNT        PIC 9.
-           05  LS-SCALE           OCCURS 4 TIMES.
+           05  LS-SCALE           OCCURS 8 TIMES.
                10  LS-SC-NAME     PIC X(16).
                10  LS-SC-NOTE-CNT PIC 9.
                10  LS-SC-NOTES    OCCURS 7 TIMES.

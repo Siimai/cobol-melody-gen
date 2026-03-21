@@ -65,6 +65,11 @@
        01  WS-VLQ2            PIC 9(3)   VALUE 0.
       *> Byte value for 900-WRITE-BYTE (0-255)
        01  WS-OUT-VAL         PIC 9(3)   VALUE 0.
+      *> Tempo computation
+       01  WS-TEMPO-USEC      PIC 9(7)   VALUE 500000.
+       01  WS-BYTE-T1         PIC 9(3)   VALUE 0.
+       01  WS-BYTE-T2         PIC 9(3)   VALUE 0.
+       01  WS-BYTE-T3         PIC 9(3)   VALUE 0.
 
        LINKAGE SECTION.
        01  LS-MELODY.
@@ -77,7 +82,7 @@
 
        01  LS-SCALE-TABLE.
            05  LS-SC-COUNT        PIC 9.
-           05  LS-SCALE           OCCURS 4 TIMES.
+           05  LS-SCALE           OCCURS 8 TIMES.
                10  LS-SC-NAME     PIC X(16).
                10  LS-SC-NOTE-CNT PIC 9.
                10  LS-SC-NOTES    OCCURS 7 TIMES.
@@ -88,13 +93,15 @@
        77  LS-OUTPUT-FILE         PIC X(80).
        77  LS-STATUS-MSG          PIC X(60).
        77  LS-RETURN-CODE         PIC 9.
+       77  LS-TEMPO-BPM           PIC 9(3).
 
        PROCEDURE DIVISION USING LS-MELODY
                                  LS-SCALE-TABLE
                                  LS-SELECTED-SCALE
                                  LS-OUTPUT-FILE
                                  LS-STATUS-MSG
-                                 LS-RETURN-CODE.
+                                 LS-RETURN-CODE
+                                 LS-TEMPO-BPM.
 
       *> ============================================================
       *> 000-MAIN  –  Orchestrate the write sequence.
@@ -211,17 +218,35 @@
 
       *> ============================================================
       *> 500-WRITE-TEMPO
-      *> Tempo meta event (7 bytes): 00 FF 51 03 07 A1 20
-      *> 120 BPM = 500 000 µs/beat = 0x07A120
+      *> Tempo meta event (7 bytes): 00 FF 51 03 tt tt tt
+      *> BPM is user-selected; µs/beat = 60 000 000 / BPM
       *> ============================================================
        500-WRITE-TEMPO.
-           MOVE 0   TO WS-OUT-VAL     PERFORM 900-WRITE-BYTE
-           MOVE 255 TO WS-OUT-VAL     PERFORM 900-WRITE-BYTE
-           MOVE 81  TO WS-OUT-VAL     PERFORM 900-WRITE-BYTE
-           MOVE 3   TO WS-OUT-VAL     PERFORM 900-WRITE-BYTE
-           MOVE 7   TO WS-OUT-VAL     PERFORM 900-WRITE-BYTE
-           MOVE 161 TO WS-OUT-VAL     PERFORM 900-WRITE-BYTE
-           MOVE 32  TO WS-OUT-VAL     PERFORM 900-WRITE-BYTE.
+           COMPUTE WS-TEMPO-USEC = 60000000 / LS-TEMPO-BPM
+               ON SIZE ERROR
+                   MOVE 500000 TO WS-TEMPO-USEC
+           END-COMPUTE
+           COMPUTE WS-BYTE-T1 = WS-TEMPO-USEC / 65536
+               ON SIZE ERROR
+                   MOVE 0 TO WS-BYTE-T1
+           END-COMPUTE
+           COMPUTE WS-BYTE-T2 =
+               FUNCTION MOD(WS-TEMPO-USEC / 256, 256)
+               ON SIZE ERROR
+                   MOVE 0 TO WS-BYTE-T2
+           END-COMPUTE
+           COMPUTE WS-BYTE-T3 =
+               FUNCTION MOD(WS-TEMPO-USEC, 256)
+               ON SIZE ERROR
+                   MOVE 0 TO WS-BYTE-T3
+           END-COMPUTE
+           MOVE 0          TO WS-OUT-VAL  PERFORM 900-WRITE-BYTE
+           MOVE 255        TO WS-OUT-VAL  PERFORM 900-WRITE-BYTE
+           MOVE 81         TO WS-OUT-VAL  PERFORM 900-WRITE-BYTE
+           MOVE 3          TO WS-OUT-VAL  PERFORM 900-WRITE-BYTE
+           MOVE WS-BYTE-T1 TO WS-OUT-VAL  PERFORM 900-WRITE-BYTE
+           MOVE WS-BYTE-T2 TO WS-OUT-VAL  PERFORM 900-WRITE-BYTE
+           MOVE WS-BYTE-T3 TO WS-OUT-VAL  PERFORM 900-WRITE-BYTE.
 
       *> ============================================================
       *> 600-WRITE-NOTES
