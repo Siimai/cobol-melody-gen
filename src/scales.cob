@@ -47,7 +47,7 @@
            PERFORM 300-LOAD-A-MINOR
            PERFORM 400-LOAD-C-PENTA
 
-           EXIT PROGRAM.
+           GOBACK.
 
       *> ----------------------------------------------------------
       *> Scale 1: C Major  – C D E F G A B

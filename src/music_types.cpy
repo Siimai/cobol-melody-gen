@@ -15,8 +15,7 @@
       *> --- Melody storage (up to 64 notes) -----------------------
        01  WS-MELODY.
            05  WS-MELODY-LEN         PIC 99 VALUE 0.
-           05  WS-NOTES              OCCURS 64 TIMES
-                                     INDEXED BY WS-NI.
+           05  WS-NOTES              OCCURS 64 TIMES.
                10  WS-N-CHAR         PIC X.
                10  WS-N-ACCID        PIC X.
                10  WS-N-OCTAVE       PIC 9.
@@ -27,12 +26,10 @@
       *>   Pentatonic scales use 5 notes; remaining slots are blank.
        01  WS-SCALE-TABLE.
            05  WS-SC-COUNT           PIC 9 VALUE 4.
-           05  WS-SCALE              OCCURS 4 TIMES
-                                     INDEXED BY WS-SC-IDX.
+           05  WS-SCALE              OCCURS 4 TIMES.
                10  WS-SC-NAME        PIC X(16).
                10  WS-SC-NOTE-CNT    PIC 9.
-               10  WS-SC-NOTES       OCCURS 7 TIMES
-                                     INDEXED BY WS-SCN-IDX.
+               10  WS-SC-NOTES       OCCURS 7 TIMES.
                    15  WS-SCN-CHAR   PIC X.
                    15  WS-SCN-ACCID  PIC X.
 

@@ -33,8 +33,8 @@
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
            SELECT MIDI-FILE
-               ASSIGN TO DYNAMIC WS-MIDI-FNAME
-               ORGANIZATION IS BINARY SEQUENTIAL
+               ASSIGN TO DYNAMIC WS-MIDI-FNAME        *> GnuCOBOL-only
+               ORGANIZATION IS BINARY SEQUENTIAL      *> GnuCOBOL-only
                FILE STATUS IS WS-FS.
 
        DATA DIVISION.
@@ -109,7 +109,7 @@
                STRING 'ERROR: cannot open ' WS-MIDI-FNAME
                    DELIMITED SIZE INTO LS-STATUS-MSG
                MOVE 1 TO LS-RETURN-CODE
-               EXIT PROGRAM
+               GOBACK
            END-IF
 
            PERFORM 300-WRITE-HEADER
@@ -128,7 +128,7 @@
                    DELIMITED SIZE INTO LS-STATUS-MSG
            END-IF
 
-           EXIT PROGRAM.
+           GOBACK.
 
       *> ============================================================
       *> 100-BUILD-FILENAME
@@ -154,6 +154,9 @@
       *> ============================================================
        200-COMPUTE-TRACK-LEN.
            COMPUTE WS-TRACK-LEN = (LS-MELODY-LEN * 9) + 11
+               ON SIZE ERROR
+                   MOVE 0 TO WS-TRACK-LEN
+           END-COMPUTE
            COMPUTE WS-BYTE4 =
                FUNCTION MOD(WS-TRACK-LEN, 256)
            COMPUTE WS-BYTE3 =
@@ -278,6 +281,9 @@
            END-EVALUATE
            COMPUTE WS-PITCH = WS-BASE-PITCH
                             + ((LS-N-OCTAVE(WS-LOOP) - 4) * 12)
+               ON SIZE ERROR
+                   MOVE WS-BASE-PITCH TO WS-PITCH
+           END-COMPUTE
            IF LS-N-ACCID(WS-LOOP) = '#'
                ADD 1 TO WS-PITCH
            END-IF.
@@ -316,6 +322,11 @@
       *> ============================================================
        900-WRITE-BYTE.
            MOVE FUNCTION CHAR(WS-OUT-VAL + 1) TO MIDI-BYTE
-           WRITE MIDI-BYTE.
+           WRITE MIDI-BYTE
+           IF WS-FS NOT = '00'
+               STRING 'ERROR: write failed for ' WS-MIDI-FNAME
+                   DELIMITED SIZE INTO LS-STATUS-MSG
+               MOVE 1 TO LS-RETURN-CODE
+           END-IF.
 
        END PROGRAM midiexp.
