@@ -66,7 +66,7 @@ executable.
 ```bash
 make run        # build (if needed) then launch the app
 # or, after building:
-./melody-gen
+COB_LIBRARY_PATH=./build ./build/melody-gen
 ```
 
 You will see a menu like:
@@ -76,16 +76,18 @@ You will see a menu like:
      COBOL MELODY GENERATOR
   =============================================
   Scale: C Major
+  Tempo:  120 BPM
   -----
   1  Select scale
   2  Generate melody
   3  View current melody
   4  Save melody to file
   5  Export as MIDI
-  6  Exit
+  6  Set tempo
+  7  Exit
   =============================================
 
-  Enter choice (1-6):
+  Enter choice (1-7):
 ```
 
 ---
@@ -98,6 +100,10 @@ You will see a menu like:
 | 2 | G Major | G A B C D E F# |
 | 3 | A Natural Minor | A B C D E F G |
 | 4 | C Pentatonic | C D E G A |
+| 5 | D Dorian | D E F G A B C |
+| 6 | E Minor | E F# G A B C D |
+| 7 | A Minor Pentatonic | A C D E G |
+| 8 | E Minor Pentatonic | E G A B D |
 
 ---
 
@@ -136,8 +142,9 @@ A 4Q  D 5E  G 4Q  C 4W
 ### MIDI (option 5)
 
 Melodies are exported to `output/melody_YYYYMMDD_HHMMSS.mid` — a
-standard Type 0 MIDI file (480 ticks/beat, 120 BPM) written entirely
-in GnuCOBOL with no external dependencies.
+standard Type 0 MIDI file (480 ticks/beat) written entirely in GnuCOBOL
+with no external dependencies. Tempo is user-selectable via option 6
+(80 / 100 / 120 / 140 / 160 BPM; default 120 BPM).
 
 Open a generated file on macOS:
 
@@ -173,8 +180,9 @@ reports PASS/FAIL for each check.
 - Audio playback from within the app
 - ABC / MusicXML export
 - Manual note editing
-- Broad key/scale coverage beyond the 4 built-in scales
 - Seeded (reproducible) random generation
 - Velocity / dynamics (all MIDI notes use fixed velocity 100)
-- Tempo selection (hardcoded 120 BPM in MIDI export)
 - Flat accidentals (not present in the built-in scales)
+- ABC / MusicXML export
+- Audio playback from within the app
+- Manual note editing
