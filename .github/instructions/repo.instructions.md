@@ -41,3 +41,5 @@ Follow this process for every GitHub issue:
    - `head`: the feature branch
    - `title`: `fix: <summary> (#<number>)`
    - `body`: list every sub-item fixed with a short explanation, grouped by ID/category.
+
+9. **Merge via squash** — once the PR is approved, merge it using `merge_method: squash`. This keeps `main` history clean with one commit per issue. Delete the feature branch after merging.
