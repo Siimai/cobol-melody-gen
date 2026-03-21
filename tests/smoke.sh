@@ -52,7 +52,7 @@ fi
 # ----- 3. Binary exists --------------------------------------
 echo ""
 echo "3. Checking binary..."
-if [[ -x "$ROOT/melody-gen" ]]; then
+if [[ -x "$ROOT/build/melody-gen" ]]; then
     ok "melody-gen binary is present and executable"
 else
     fail "melody-gen binary not found or not executable"
@@ -68,7 +68,7 @@ fi
 #   6 → exit
 echo ""
 echo "4. Running scripted session (generate → view → save → MIDI → exit)..."
-SESSION_OUT=$(printf '1\n1\n2\n3\n\n4\n5\n6\n' | "$ROOT/melody-gen" 2>&1 || true)
+SESSION_OUT=$(printf '1\n1\n2\n3\n\n4\n5\n6\n' | COB_LIBRARY_PATH="$ROOT/build" "$ROOT/build/melody-gen" 2>&1 || true)
 
 if echo "$SESSION_OUT" | grep -q "COBOL MELODY GENERATOR"; then
     ok "Menu banner displayed"
