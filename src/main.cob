@@ -122,7 +122,7 @@
            END-EVALUATE.
 
       *> ============================================================
-      *> 300-SELECT-SCALE  –  Show scale list, accept 1-4.
+      *> 300-SELECT-SCALE  –  Show scale list, accept 1-8.
       *> ============================================================
        300-SELECT-SCALE.
            DISPLAY SPACES
@@ -131,8 +131,12 @@
            DISPLAY '  2  G Major'
            DISPLAY '  3  A Natural Minor'
            DISPLAY '  4  C Pentatonic'
+           DISPLAY '  5  D Dorian'
+           DISPLAY '  6  E Minor'
+           DISPLAY '  7  A Minor Pentatonic'
+           DISPLAY '  8  E Minor Pentatonic'
            DISPLAY SPACES
-           DISPLAY '  Enter scale number (1-4): ' WITH NO ADVANCING
+           DISPLAY '  Enter scale number (1-8): ' WITH NO ADVANCING
            ACCEPT WS-MENU-CHOICE
 
            EVALUATE WS-MENU-CHOICE
@@ -140,6 +144,10 @@
                WHEN '2' MOVE 2 TO WS-SELECTED-SCALE
                WHEN '3' MOVE 3 TO WS-SELECTED-SCALE
                WHEN '4' MOVE 4 TO WS-SELECTED-SCALE
+               WHEN '5' MOVE 5 TO WS-SELECTED-SCALE
+               WHEN '6' MOVE 6 TO WS-SELECTED-SCALE
+               WHEN '7' MOVE 7 TO WS-SELECTED-SCALE
+               WHEN '8' MOVE 8 TO WS-SELECTED-SCALE
                WHEN OTHER
                    MOVE 'Invalid scale. Keeping current selection.'
                        TO WS-STATUS-MSG
