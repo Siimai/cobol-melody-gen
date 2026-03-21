@@ -24,16 +24,19 @@ Follow this process for every GitHub issue:
 
 4. **Implement all fixes** — apply every change described in the issue, in one focused commit. Do not include unrelated edits (e.g., instruction files that happened to be dirty).
 
-5. **Commit with a descriptive message** — format:
+5. **Verify the build passes** — run `make` and confirm it exits with code 0 before committing. Fix any build errors first, then commit.
+
+6. **Commit with a descriptive message** — format:
    ```
    fix: <short summary> (closes #<number>)
 
    <bullet per sub-item explaining what changed and why>
    ```
+   Never amend or rebase commits that have already been pushed. If a follow-up fix is needed, create a new commit with a clear message describing what was corrected.
 
-6. **Push the branch** — `git push origin <branch-name>`.
+7. **Push the branch** — `git push origin <branch-name>`.
 
-7. **Open a pull request** via the GitHub tool:
+8. **Open a pull request** via the GitHub tool:
    - `base`: `main`
    - `head`: the feature branch
    - `title`: `fix: <summary> (#<number>)`
