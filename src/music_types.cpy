@@ -21,12 +21,12 @@
                10  WS-N-OCTAVE       PIC 9.
                10  WS-N-DUR          PIC X.
 
-      *> --- Scale table (4 predefined scales) ---------------------
+      *> --- Scale table (8 predefined scales) ---------------------
       *>   Each scale holds up to 7 notes (diatonic).
       *>   Pentatonic scales use 5 notes; remaining slots are blank.
        01  WS-SCALE-TABLE.
-           05  WS-SC-COUNT           PIC 9 VALUE 4.
-           05  WS-SCALE              OCCURS 4 TIMES.
+           05  WS-SC-COUNT           PIC 9 VALUE 8.
+           05  WS-SCALE              OCCURS 8 TIMES.
                10  WS-SC-NAME        PIC X(16).
                10  WS-SC-NOTE-CNT    PIC 9.
                10  WS-SC-NOTES       OCCURS 7 TIMES.
