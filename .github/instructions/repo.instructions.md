@@ -59,4 +59,10 @@ Follow this process for every GitHub issue:
    - `title`: `fix: <summary> (#<number>)`
    - `body`: list every sub-item fixed with a short explanation, grouped by ID/category.
 
-9. **Merge via squash** — once the PR is approved, merge it using `merge_method: squash`. This keeps `main` history clean with one commit per issue. Delete the feature branch after merging.
+8a. **Gate on manual testing** — STOP after opening the PR. Tell the user:
+   - The branch is built, tests pass, and the PR is open.
+   - Invite them to run `make run` and test manually.
+   - Ask explicitly: **"Ready to merge, or would you like to skip manual testing and merge now?"**
+   - Do NOT proceed to merge until the user gives the go-ahead. Wait for their response.
+
+9. **Merge via squash** — once the user approves, merge using `merge_method: squash`. This keeps `main` history clean with one commit per issue. Delete the feature branch after merging.
