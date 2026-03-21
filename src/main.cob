@@ -32,6 +32,7 @@
            88  APP-RUNNING        VALUE 'Y'.
            88  APP-DONE           VALUE 'N'.
        77  WS-PAUSE-KEY           PIC X VALUE SPACE.
+       77  WS-TEMPO-DISP          PIC ZZZ VALUE 0.
 
        PROCEDURE DIVISION.
 
@@ -73,11 +74,13 @@
 
       *> --- Print the main menu ------------------------------------
        220-SHOW-MENU.
+           MOVE WS-TEMPO-BPM TO WS-TEMPO-DISP
            DISPLAY SPACES
            DISPLAY '  ============================================='
            DISPLAY '     COBOL MELODY GENERATOR'
            DISPLAY '  ============================================='
            DISPLAY '  Scale: ' WS-SC-NAME(WS-SELECTED-SCALE)
+           DISPLAY '  Tempo: ' FUNCTION TRIM(WS-TEMPO-DISP) ' BPM'
            DISPLAY '  -----'
            DISPLAY '  1  Select scale'
            DISPLAY '  2  Generate melody'
@@ -90,22 +93,24 @@
                DISPLAY '  4  Save melody to file   [generate first]'
                DISPLAY '  5  Export as MIDI         [generate first]'
            END-IF
-           DISPLAY '  6  Exit'
+           DISPLAY '  6  Set tempo'
+           DISPLAY '  7  Exit'
            DISPLAY '  ============================================='
            DISPLAY SPACES.
 
       *> --- Read and validate the menu choice ---------------------
        230-READ-CHOICE.
            MOVE SPACE TO WS-MENU-CHOICE
-           DISPLAY '  Enter choice (1-6): ' WITH NO ADVANCING
+           DISPLAY '  Enter choice (1-7): ' WITH NO ADVANCING
            ACCEPT WS-MENU-CHOICE
            IF WS-MENU-CHOICE NOT = '1' AND
               WS-MENU-CHOICE NOT = '2' AND
               WS-MENU-CHOICE NOT = '3' AND
               WS-MENU-CHOICE NOT = '4' AND
               WS-MENU-CHOICE NOT = '5' AND
-              WS-MENU-CHOICE NOT = '6'
-               MOVE 'Invalid choice. Please enter 1 to 6.'
+              WS-MENU-CHOICE NOT = '6' AND
+              WS-MENU-CHOICE NOT = '7'
+               MOVE 'Invalid choice. Please enter 1 to 7.'
                    TO WS-STATUS-MSG
                MOVE SPACE TO WS-MENU-CHOICE
            END-IF.
@@ -118,7 +123,8 @@
                WHEN '3' PERFORM 320-VIEW
                WHEN '4' PERFORM 330-SAVE
                WHEN '5' PERFORM 360-MIDI-EXPORT
-               WHEN '6' PERFORM 340-EXIT
+               WHEN '6' PERFORM 370-SET-TEMPO
+               WHEN '7' PERFORM 340-EXIT
            END-EVALUATE.
 
       *> ============================================================
@@ -237,7 +243,44 @@
                                 WS-SELECTED-SCALE
                                 WS-OUTPUT-FILE
                                 WS-STATUS-MSG
-                                WS-RETURN-CODE.
+                                WS-RETURN-CODE
+                                WS-TEMPO-BPM.
+
+      *> ============================================================
+      *> 370-SET-TEMPO  –  Let user choose playback tempo.
+      *> ============================================================
+       370-SET-TEMPO.
+           DISPLAY SPACES
+           DISPLAY '  -- Set tempo --'
+           DISPLAY '  1  Slow      ( 80 BPM)'
+           DISPLAY '  2  Moderate  (100 BPM)'
+           DISPLAY '  3  Standard  (120 BPM)'
+           DISPLAY '  4  Fast      (140 BPM)'
+           DISPLAY '  5  Very Fast (160 BPM)'
+           DISPLAY SPACES
+           DISPLAY '  Enter tempo (1-5): ' WITH NO ADVANCING
+           ACCEPT WS-MENU-CHOICE
+
+           EVALUATE WS-MENU-CHOICE
+               WHEN '1'
+                   MOVE  80 TO WS-TEMPO-BPM
+                   MOVE 'Tempo set to 80 BPM'  TO WS-STATUS-MSG
+               WHEN '2'
+                   MOVE 100 TO WS-TEMPO-BPM
+                   MOVE 'Tempo set to 100 BPM' TO WS-STATUS-MSG
+               WHEN '3'
+                   MOVE 120 TO WS-TEMPO-BPM
+                   MOVE 'Tempo set to 120 BPM' TO WS-STATUS-MSG
+               WHEN '4'
+                   MOVE 140 TO WS-TEMPO-BPM
+                   MOVE 'Tempo set to 140 BPM' TO WS-STATUS-MSG
+               WHEN '5'
+                   MOVE 160 TO WS-TEMPO-BPM
+                   MOVE 'Tempo set to 160 BPM' TO WS-STATUS-MSG
+               WHEN OTHER
+                   MOVE 'Invalid tempo. Keeping current setting.'
+                       TO WS-STATUS-MSG
+           END-EVALUATE.
 
       *> ============================================================
       *> 340-EXIT  –  Say goodbye and stop the loop.

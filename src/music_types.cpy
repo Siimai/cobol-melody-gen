@@ -46,6 +46,7 @@
            05  WS-RETURN-CODE        PIC 9   VALUE 0.
                88  RC-OK             VALUE 0.
                88  RC-ERROR          VALUE 1.
+           05  WS-TEMPO-BPM          PIC 9(3) VALUE 120.
 
       *> --- Shared temporaries -----------------------------------
        77  WS-IDX-A                  PIC 99  VALUE 0.
