@@ -17,6 +17,7 @@ Use these details for all GitHub interactions (listing issues, creating pull req
 Plan files in `plans/` are **local drafts only** — they are git-ignored and never committed.
 
 1. **Draft in `plans/`** — create a markdown file (e.g., `plans/my-feature.md`) to capture the proposed approach, sub-tasks, and any before/after details.
+   - All file references in plan files must use **relative paths** (e.g., `src/main.cob`, `output/`). Never use absolute paths (e.g., `/Users/name/project/src/main.cob`).
 2. **Iterate locally** — refine the plan until it is ready for implementation.
 3. **Promote to a GitHub issue** — once the plan is approved, create a GitHub issue via the GitHub tool using the plan content as the issue body. The issue becomes the single source of truth; the local file can be deleted.
 4. **Do not commit plan files** — `plans/` is in `.gitignore`. Only the resulting GitHub issue is tracked.
