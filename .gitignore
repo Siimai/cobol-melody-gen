@@ -1,7 +1,5 @@
-# GnuCOBOL build artifacts
-*.so
-*.o
-melody-gen
+# Compiler artifacts (binary + shared objects)
+build/
 
 # Generated melody output files (keep the directory, not the contents)
 output/*

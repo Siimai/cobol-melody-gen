@@ -91,11 +91,23 @@ Use standard fixed-column format strictly:
 | Paragraphs | `NNN-VERB-NOUN` | `300-WRITE-OUTPUT` |
 | Condition names (88) | `ALL-CAPS`, descriptive | `APP-RUNNING` |
 
+## Plans and Design Documents
+
+All plan, design, and fix-plan markdown files must be created in the `plans/` folder at the workspace root.
+
+- Correct: `plans/my-feature-plan.md`
+- Incorrect: `my-feature-plan.md` (root), `docs/plan.md` (other folders)
+
 ## Build
 
 ```bash
 make        # compile all modules
 make run    # compile and run
+make clean  # remove build/ directory
 ```
+
+- All compiler artifacts (binary and `.so` shared objects) are written to `build/`.
+- Runtime melody outputs (`.txt`, `.mid`) are written to `output/`.
+- `build/` is fully gitignored; `output/` is gitignored except for `output/.gitkeep`.
 
 Compiler: GnuCOBOL (`cobc`) is used locally; write source to be portable to IBM Enterprise COBOL. Flag any GnuCOBOL-isms with a `*> GnuCOBOL-only` comment.
