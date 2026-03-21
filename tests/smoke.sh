@@ -65,10 +65,10 @@ fi
 #   3 → view melody, <enter> → satisfy the pause
 #   4 → save melody (text)
 #   5 → export as MIDI
-#   6 → exit
+#   7 → exit  (6 is now Set tempo)
 echo ""
 echo "4. Running scripted session (generate → view → save → MIDI → exit)..."
-SESSION_OUT=$(printf '1\n1\n2\n3\n\n4\n5\n6\n' | COB_LIBRARY_PATH="$ROOT/build" "$ROOT/build/melody-gen" 2>&1 || true)
+SESSION_OUT=$(printf '1\n1\n2\n3\n\n4\n5\n7\n' | COB_LIBRARY_PATH="$ROOT/build" "$ROOT/build/melody-gen" 2>&1 || true)
 
 if echo "$SESSION_OUT" | grep -q "COBOL MELODY GENERATOR"; then
     ok "Menu banner displayed"
@@ -146,6 +146,33 @@ if [[ -n "$OUTFILE" ]]; then
     fi
 else
     fail "No output/melody_*.txt file found after save"
+fi
+
+# ----- 7. New feature: tempo selection ----------------------
+echo ""
+echo "7. Testing tempo selection..."
+# Input sequence: 1=select scale, 1=C Major,
+#                  6=set tempo, 4=Fast(140 BPM),
+#                  2=generate, 5=MIDI export, 7=exit
+SESSION2_OUT=$(printf '1\n1\n6\n4\n2\n5\n7\n' | \
+    COB_LIBRARY_PATH="$ROOT/build" "$ROOT/build/melody-gen" 2>&1 || true)
+
+if echo "$SESSION2_OUT" | grep -q "Set tempo"; then
+    ok "Set tempo option visible in main menu"
+else
+    fail "Set tempo option not found in main menu"
+fi
+
+if echo "$SESSION2_OUT" | grep -q "Tempo set to 140 BPM"; then
+    ok "Tempo set to 140 BPM confirmation displayed"
+else
+    fail "Tempo set to 140 BPM confirmation not found"
+fi
+
+if echo "$SESSION2_OUT" | grep -q "MIDI saved to"; then
+    ok "MIDI exported successfully with custom tempo"
+else
+    fail "MIDI export failed in tempo session"
 fi
 
 # ----- Summary -----------------------------------------------
