@@ -1,0 +1,11 @@
+# GnuCOBOL build artifacts
+*.so
+*.o
+melody-gen
+
+# Generated melody output files (keep the directory, not the contents)
+output/*
+!output/.gitkeep
+
+# macOS
+.DS_Store
