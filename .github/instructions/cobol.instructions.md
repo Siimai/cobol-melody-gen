@@ -93,9 +93,9 @@ Use standard fixed-column format strictly:
 
 ## Plans and Design Documents
 
-All plan, design, and fix-plan markdown files must be created in the `plans/` folder at the workspace root.
+All plan, design, and fix-plan markdown files must be created in the `plans/` folder at the workspace root. The `plans/` directory is git-ignored — plan files are local drafts only and are never committed. Once a plan is approved, promote it to a GitHub issue (see `repo.instructions.md`) and delete the local file.
 
-- Correct: `plans/my-feature-plan.md`
+- Correct: `plans/my-feature-plan.md` (local draft only)
 - Incorrect: `my-feature-plan.md` (root), `docs/plan.md` (other folders)
 
 ## Build

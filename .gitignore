@@ -5,5 +5,8 @@ build/
 output/*
 !output/.gitkeep
 
+# Plan drafts — local only; promoted to GitHub issues when approved
+plans/
+
 # macOS
 .DS_Store
