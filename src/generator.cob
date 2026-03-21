@@ -68,7 +68,7 @@
            PERFORM 100-SEED-RANDOM
            PERFORM 200-PICK-LENGTH
            PERFORM 300-GENERATE-NOTES
-           EXIT PROGRAM.
+           GOBACK.
 
       *> ----------------------------------------------------------
       *> Seed FUNCTION RANDOM from the current time (HHMMSS).
@@ -76,6 +76,9 @@
        100-SEED-RANDOM.
            MOVE FUNCTION CURRENT-DATE TO WS-CURR-DATE
            COMPUTE WS-SEED   = FUNCTION NUMVAL(WS-CURR-DATE(9:6))
+               ON SIZE ERROR
+                   MOVE 0 TO WS-SEED
+           END-COMPUTE
            COMPUTE WS-IGNORE = FUNCTION RANDOM(WS-SEED).
 
       *> ----------------------------------------------------------
@@ -85,6 +88,9 @@
        200-PICK-LENGTH.
            COMPUTE WS-RND           = FUNCTION RANDOM * 9
            COMPUTE WS-MELODY-LEN-NEW = 8 + WS-RND
+               ON SIZE ERROR
+                   MOVE 8 TO WS-MELODY-LEN-NEW
+           END-COMPUTE
            MOVE WS-MELODY-LEN-NEW TO LS-MELODY-LEN.
 
       *> ----------------------------------------------------------
@@ -113,12 +119,18 @@
       *> --- Randomly pick a note index within the scale -----------
        310-PICK-NOTE.
            COMPUTE WS-RND       = FUNCTION RANDOM * WS-NOTE-MAX
-           COMPUTE WS-NOTE-PICK = 1 + WS-RND.
+           COMPUTE WS-NOTE-PICK = 1 + WS-RND
+               ON SIZE ERROR
+                   MOVE 1 TO WS-NOTE-PICK
+           END-COMPUTE.
 
       *> --- Octave: 4 or 5 (equal weight) -------------------------
        320-PICK-OCTAVE.
            COMPUTE WS-RND      = FUNCTION RANDOM * 2
-           COMPUTE WS-OCT-PICK = 4 + WS-RND.
+           COMPUTE WS-OCT-PICK = 4 + WS-RND
+               ON SIZE ERROR
+                   MOVE 4 TO WS-OCT-PICK
+           END-COMPUTE.
 
       *> --- Duration: Q 50% | H 25% | E 15% | W 10% --------------
       *>   Bucket over 20 values:
@@ -130,6 +142,9 @@
        330-PICK-DURATION.
            COMPUTE WS-RND      = FUNCTION RANDOM * 20
            COMPUTE WS-DUR-PICK = WS-RND
+               ON SIZE ERROR
+                   MOVE 0 TO WS-DUR-PICK
+           END-COMPUTE
 
            EVALUATE TRUE
                WHEN WS-DUR-PICK < 10

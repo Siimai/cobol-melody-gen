@@ -39,7 +39,7 @@
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
            SELECT MELODY-FILE
-               ASSIGN TO DYNAMIC WS-OUT-FNAME
+               ASSIGN TO DYNAMIC WS-OUT-FNAME       *> GnuCOBOL-only
                ORGANIZATION IS LINE SEQUENTIAL
                FILE STATUS IS WS-FS.
 
@@ -123,7 +123,7 @@
                    MOVE 1 TO LS-RETURN-CODE
            END-EVALUATE
 
-           EXIT PROGRAM.
+           GOBACK.
 
       *> ============================================================
       *> 100-DISPLAY-MELODY
@@ -203,10 +203,12 @@
                DELIMITED SIZE
                INTO MELODY-FILE-REC
            WRITE MELODY-FILE-REC
+           PERFORM 290-CHECK-WRITE-STATUS
 
            MOVE '------------------------------------------------'
                TO MELODY-FILE-REC
            WRITE MELODY-FILE-REC
+           PERFORM 290-CHECK-WRITE-STATUS
 
       *>  Notes — 8 per line, same logic as display
            MOVE 1      TO WS-COL
@@ -227,6 +229,7 @@
                    MOVE SPACES TO MELODY-FILE-REC
                    MOVE WS-NOTE-LINE TO MELODY-FILE-REC
                    WRITE MELODY-FILE-REC
+                   PERFORM 290-CHECK-WRITE-STATUS
                    MOVE SPACES TO WS-NOTE-LINE
                    MOVE 1 TO WS-COL
                ELSE
@@ -246,6 +249,19 @@
                STRING 'Saved to ' WS-OUT-FNAME
                    DELIMITED SIZE
                    INTO LS-STATUS-MSG
+           END-IF.
+
+      *> ============================================================
+      *> 290-CHECK-WRITE-STATUS
+      *> Check WS-FS after a WRITE; set LS-STATUS-MSG and
+      *> LS-RETURN-CODE to 1 on any I/O error.
+      *> ============================================================
+       290-CHECK-WRITE-STATUS.
+           IF WS-FS NOT = '00'
+               STRING 'ERROR: write failed for ' WS-OUT-FNAME
+                   DELIMITED SIZE
+                   INTO LS-STATUS-MSG
+               MOVE 1 TO LS-RETURN-CODE
            END-IF.
 
        END PROGRAM export.

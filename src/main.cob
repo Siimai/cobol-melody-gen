@@ -57,7 +57,7 @@
       *> 200-MAIN-LOOP  –  Show menu, read choice, dispatch.
       *> ============================================================
        200-MAIN-LOOP.
-           CALL 'SYSTEM' USING 'clear'
+           CALL 'SYSTEM' USING 'clear'   *> GnuCOBOL-only
            PERFORM 210-SHOW-STATUS
            PERFORM 220-SHOW-MENU
            PERFORM 230-READ-CHOICE
