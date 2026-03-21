@@ -81,7 +81,7 @@
            DISPLAY '     COBOL MELODY GENERATOR'
            DISPLAY '  ============================================='
            DISPLAY '  Scale: ' WS-SC-NAME(WS-SELECTED-SCALE)
-           DISPLAY '  Tempo: ' WS-TEMPO-DISP ' BPM'
+           DISPLAY '  Tempo: ' FUNCTION TRIM(WS-TEMPO-DISP) ' BPM'
            DISPLAY '  -----'
            DISPLAY '  1  Select scale'
            DISPLAY '  2  Generate melody'

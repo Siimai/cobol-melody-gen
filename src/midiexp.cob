@@ -232,6 +232,7 @@
            END-COMPUTE
            COMPUTE WS-BYTE-T2 =
                FUNCTION MOD(WS-TEMPO-USEC / 256, 256)
+               *> Integer division intended; extracts middle byte.
                ON SIZE ERROR
                    MOVE 0 TO WS-BYTE-T2
            END-COMPUTE

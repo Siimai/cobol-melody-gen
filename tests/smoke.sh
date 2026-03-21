@@ -151,6 +151,9 @@ fi
 # ----- 7. New features: expanded scales and tempo selection ------
 echo ""
 echo "7. Testing new scales and tempo selection..."
+# Input sequence: 1=select scale, 5=D Dorian,
+#                  6=set tempo, 4=Fast(140 BPM),
+#                  2=generate, 5=MIDI export, 7=exit
 SESSION2_OUT=$(printf '1\n5\n6\n4\n2\n5\n7\n' | \
     COB_LIBRARY_PATH="$ROOT/build" "$ROOT/build/melody-gen" 2>&1 || true)
 
