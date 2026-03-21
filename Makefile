@@ -1,4 +1,5 @@
 COBC     = cobc
+COBFLAGS = -ffold-copy=LOWER
 COBCOPY  = src
 BUILDDIR = build
 BIN      = $(BUILDDIR)/melody-gen
@@ -11,11 +12,11 @@ all: setup $(BIN)
 # All artifacts (binary + .so files) land in $(BUILDDIR).
 # The -I flag tells cobc where to find copybooks (*.cpy).
 $(BIN): src/main.cob src/scales.cob src/generator.cob src/export.cob src/midiexp.cob
-	$(COBC) -m -I $(COBCOPY) src/scales.cob    -o $(BUILDDIR)/scales
-	$(COBC) -m -I $(COBCOPY) src/generator.cob -o $(BUILDDIR)/generator
-	$(COBC) -m -I $(COBCOPY) src/export.cob    -o $(BUILDDIR)/export
-	$(COBC) -m -I $(COBCOPY) src/midiexp.cob   -o $(BUILDDIR)/midiexp
-	$(COBC) -x -I $(COBCOPY) src/main.cob      -o $(BIN)
+	$(COBC) $(COBFLAGS) -m -I $(COBCOPY) src/scales.cob    -o $(BUILDDIR)/scales
+	$(COBC) $(COBFLAGS) -m -I $(COBCOPY) src/generator.cob -o $(BUILDDIR)/generator
+	$(COBC) $(COBFLAGS) -m -I $(COBCOPY) src/export.cob    -o $(BUILDDIR)/export
+	$(COBC) $(COBFLAGS) -m -I $(COBCOPY) src/midiexp.cob   -o $(BUILDDIR)/midiexp
+	$(COBC) $(COBFLAGS) -x -I $(COBCOPY) src/main.cob      -o $(BIN)
 
 run: all
 	COB_LIBRARY_PATH=./$(BUILDDIR) ./$(BIN)
