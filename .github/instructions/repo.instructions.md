@@ -36,6 +36,13 @@ Follow this process for every GitHub issue:
 
 5. **Verify the build passes** — run `make` and confirm it exits with code 0 before committing. Fix any build errors first, then commit.
 
+5a. **Update README.md** — for every user-visible change, update the relevant section before committing:
+   - New or removed menu options → update the menu screenshot in the **Run** section.
+   - New scales → add rows to the **Supported scales** table.
+   - MIDI/export behaviour changes → update the **MIDI** subsection under *Saved files*.
+   - Features moved from planned to complete → remove them from **"What's not in v1"**.
+   - Binary path or build output changes → update the **Run** section.
+
 6. **Commit with a descriptive message** — format:
    ```
    fix: <short summary> (closes #<number>)
