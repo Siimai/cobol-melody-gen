@@ -32,7 +32,8 @@
            88  APP-RUNNING        VALUE 'Y'.
            88  APP-DONE           VALUE 'N'.
        77  WS-PAUSE-KEY           PIC X VALUE SPACE.
-       77  WS-TEMPO-DISP          PIC ZZZ VALUE 0.
+       77  WS-TEMPO-DISP          PIC ZZZ.
+       77  WS-TEMPO-LEAD          PIC 9.
 
        PROCEDURE DIVISION.
 
@@ -68,7 +69,7 @@
        210-SHOW-STATUS.
            IF WS-STATUS-MSG NOT = SPACES
                DISPLAY SPACES
-               DISPLAY '  >> ' FUNCTION TRIM(WS-STATUS-MSG)
+               DISPLAY '  >> ' WS-STATUS-MSG
                MOVE SPACES TO WS-STATUS-MSG
            END-IF.
 
@@ -80,7 +81,11 @@
            DISPLAY '     COBOL MELODY GENERATOR'
            DISPLAY '  ============================================='
            DISPLAY '  Scale: ' WS-SC-NAME(WS-SELECTED-SCALE)
-           DISPLAY '  Tempo: ' FUNCTION TRIM(WS-TEMPO-DISP) ' BPM'
+           MOVE 0 TO WS-TEMPO-LEAD
+           INSPECT WS-TEMPO-DISP TALLYING WS-TEMPO-LEAD
+               FOR LEADING SPACES
+           DISPLAY '  Tempo: ' WS-TEMPO-DISP(WS-TEMPO-LEAD + 1:)
+               ' BPM'
            DISPLAY '  -----'
            DISPLAY '  1  Select scale'
            DISPLAY '  2  Generate melody'
@@ -157,13 +162,13 @@
                WHEN OTHER
                    MOVE 'Invalid scale. Keeping current selection.'
                        TO WS-STATUS-MSG
-                   EXIT PARAGRAPH
            END-EVALUATE
 
-           STRING 'Scale set to: '
-                  FUNCTION TRIM(WS-SC-NAME(WS-SELECTED-SCALE))
-               DELIMITED SIZE
-               INTO WS-STATUS-MSG.
+           IF WS-MENU-CHOICE >= '1' AND WS-MENU-CHOICE <= '8'
+               STRING 'Scale set to: ' DELIMITED SIZE
+                      WS-SC-NAME(WS-SELECTED-SCALE) DELIMITED BY '  '
+                   INTO WS-STATUS-MSG
+           END-IF.
 
       *> ============================================================
       *> 310-GENERATE  –  Call generator, mark melody as ready.
@@ -186,17 +191,17 @@
            IF NO-MELODY
                MOVE 'No melody yet. Use option 2 to generate one.'
                    TO WS-STATUS-MSG
-               EXIT PARAGRAPH
-           END-IF
-           CALL 'export' USING WS-MELODY
-                               WS-SCALE-TABLE
-                               WS-SELECTED-SCALE
-                               WS-MELODY-COUNT
-                               'D'
-                               WS-OUTPUT-FILE
-                               WS-STATUS-MSG
-                               WS-RETURN-CODE
-           PERFORM 350-PAUSE.
+           ELSE
+               CALL 'export' USING WS-MELODY
+                                   WS-SCALE-TABLE
+                                   WS-SELECTED-SCALE
+                                   WS-MELODY-COUNT
+                                   'D'
+                                   WS-OUTPUT-FILE
+                                   WS-STATUS-MSG
+                                   WS-RETURN-CODE
+               PERFORM 350-PAUSE
+           END-IF.
 
       *> ============================================================
       *> 330-SAVE  –  Increment counter then write the file.
@@ -205,19 +210,19 @@
            IF NO-MELODY
                MOVE 'No melody yet. Use option 2 to generate one.'
                    TO WS-STATUS-MSG
-               EXIT PARAGRAPH
-           END-IF
-           ADD 1 TO WS-MELODY-COUNT
-           CALL 'export' USING WS-MELODY
-                               WS-SCALE-TABLE
-                               WS-SELECTED-SCALE
-                               WS-MELODY-COUNT
-                               'S'
-                               WS-OUTPUT-FILE
-                               WS-STATUS-MSG
-                               WS-RETURN-CODE
-           IF RC-ERROR
-               SUBTRACT 1 FROM WS-MELODY-COUNT
+           ELSE
+               ADD 1 TO WS-MELODY-COUNT
+               CALL 'export' USING WS-MELODY
+                                   WS-SCALE-TABLE
+                                   WS-SELECTED-SCALE
+                                   WS-MELODY-COUNT
+                                   'S'
+                                   WS-OUTPUT-FILE
+                                   WS-STATUS-MSG
+                                   WS-RETURN-CODE
+               IF RC-ERROR
+                   SUBTRACT 1 FROM WS-MELODY-COUNT
+               END-IF
            END-IF.
 
       *> ============================================================
@@ -236,15 +241,15 @@
            IF NO-MELODY
                MOVE 'No melody yet. Use option 2 to generate one.'
                    TO WS-STATUS-MSG
-               EXIT PARAGRAPH
-           END-IF
-           CALL 'midiexp' USING WS-MELODY
-                                WS-SCALE-TABLE
-                                WS-SELECTED-SCALE
-                                WS-OUTPUT-FILE
-                                WS-STATUS-MSG
-                                WS-RETURN-CODE
-                                WS-TEMPO-BPM.
+           ELSE
+               CALL 'midiexp' USING WS-MELODY
+                                    WS-SCALE-TABLE
+                                    WS-SELECTED-SCALE
+                                    WS-OUTPUT-FILE
+                                    WS-STATUS-MSG
+                                    WS-RETURN-CODE
+                                    WS-TEMPO-BPM
+           END-IF.
 
       *> ============================================================
       *> 370-SET-TEMPO  –  Let user choose playback tempo.

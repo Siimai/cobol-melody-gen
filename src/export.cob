@@ -39,7 +39,7 @@
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
            SELECT MELODY-FILE
-               ASSIGN TO DYNAMIC WS-OUT-FNAME       *> GnuCOBOL-only
+               ASSIGN TO 'MELODYOUT'
                ORGANIZATION IS LINE SEQUENTIAL
                FILE STATUS IS WS-FS.
 
@@ -49,15 +49,19 @@
        01  MELODY-FILE-REC        PIC X(80).
 
        WORKING-STORAGE SECTION.
+       01  WS-PUTENV.
+           05  FILLER             PIC X(13) VALUE 'DD_MELODYOUT='.
+           05  WS-PUTENV-VAL      PIC X(80)  VALUE SPACES.
+           05  FILLER             PIC X      VALUE LOW-VALUE.
        01  WS-OUT-FNAME           PIC X(80)  VALUE SPACES.
        01  WS-FS                  PIC XX     VALUE SPACES.
        01  WS-LOOP                PIC 99     VALUE 0.
        01  WS-COL                 PIC 9      VALUE 0.
-       01  WS-COUNT-FMT           PIC ZZ9    VALUE 0.
+       01  WS-COUNT-FMT           PIC ZZ9    .
        01  WS-NOTE-DISP           PIC X(4)   VALUE SPACES.
        01  WS-LINE-BUF            PIC X(80)  VALUE SPACES.
        01  WS-LINE-POS            PIC 99     VALUE 1.
-       01  WS-LEN-FMT             PIC Z9     VALUE 0.
+       01  WS-LEN-FMT             PIC Z9     .
        01  WS-CURR-DT             PIC X(21)  VALUE SPACES.
        01  WS-TS.
            05  WS-TS-DATE         PIC X(8)   VALUE SPACES.
@@ -123,7 +127,7 @@
                    MOVE 1 TO LS-RETURN-CODE
            END-EVALUATE
 
-           GOBACK.
+           EXIT PROGRAM.
 
       *> ============================================================
       *> 100-DISPLAY-MELODY
@@ -132,8 +136,7 @@
        100-DISPLAY-MELODY.
            DISPLAY SPACES
            MOVE LS-MELODY-LEN TO WS-LEN-FMT
-           DISPLAY '  Scale  : '
-               FUNCTION TRIM(LS-SC-NAME(LS-SELECTED-SCALE))
+           DISPLAY '  Scale  : ' LS-SC-NAME(LS-SELECTED-SCALE)
            DISPLAY '  Notes  : ' WS-LEN-FMT
            DISPLAY '  -----------------------------------------------'
 
@@ -185,70 +188,70 @@
 
            MOVE WS-OUT-FNAME TO LS-OUTPUT-FILE
 
+           PERFORM 880-SET-FILENAME
            OPEN OUTPUT MELODY-FILE
            IF WS-FS NOT = '00'
                STRING 'ERROR: cannot open ' WS-OUT-FNAME
                    DELIMITED SIZE
                    INTO LS-STATUS-MSG
                MOVE 1 TO LS-RETURN-CODE
-               EXIT PARAGRAPH
-           END-IF
-
-      *>  Header line
-           MOVE LS-MELODY-LEN TO WS-LEN-FMT
-           MOVE SPACES TO MELODY-FILE-REC
-           STRING 'Scale: '
-                  FUNCTION TRIM(LS-SC-NAME(LS-SELECTED-SCALE))
-                  '  Notes: ' WS-LEN-FMT
-               DELIMITED SIZE
-               INTO MELODY-FILE-REC
-           WRITE MELODY-FILE-REC
-           PERFORM 290-CHECK-WRITE-STATUS
-
-           MOVE '------------------------------------------------'
-               TO MELODY-FILE-REC
-           WRITE MELODY-FILE-REC
-           PERFORM 290-CHECK-WRITE-STATUS
-
-      *>  Notes — 8 per line, same logic as display
-           MOVE 1      TO WS-COL
-           MOVE SPACES TO WS-NOTE-LINE
-           PERFORM VARYING WS-LOOP FROM 1 BY 1
-               UNTIL WS-LOOP > LS-MELODY-LEN
-
-               STRING LS-N-CHAR  (WS-LOOP)
-                      LS-N-ACCID (WS-LOOP)
-                      LS-N-OCTAVE(WS-LOOP)
-                      LS-N-DUR   (WS-LOOP)
-                   DELIMITED SIZE
-                   INTO WS-NOTE-DISP
-
-               MOVE WS-NOTE-DISP TO WS-NL-N(WS-COL)
-
-               IF WS-COL = 8 OR WS-LOOP = LS-MELODY-LEN
-                   MOVE SPACES TO MELODY-FILE-REC
-                   MOVE WS-NOTE-LINE TO MELODY-FILE-REC
-                   WRITE MELODY-FILE-REC
-                   PERFORM 290-CHECK-WRITE-STATUS
-                   MOVE SPACES TO WS-NOTE-LINE
-                   MOVE 1 TO WS-COL
-               ELSE
-                   ADD 1 TO WS-COL
-               END-IF
-
-           END-PERFORM
-
-           CLOSE MELODY-FILE
-
-           IF WS-FS NOT = '00'
-               STRING 'ERROR: close failed for ' WS-OUT-FNAME
-                   DELIMITED SIZE
-                   INTO LS-STATUS-MSG
-               MOVE 1 TO LS-RETURN-CODE
            ELSE
-               STRING 'Saved to ' WS-OUT-FNAME
-                   DELIMITED SIZE
-                   INTO LS-STATUS-MSG
+
+          *>  Header line
+               MOVE LS-MELODY-LEN TO WS-LEN-FMT
+               MOVE SPACES TO MELODY-FILE-REC
+               STRING 'Scale: ' DELIMITED SIZE
+                      LS-SC-NAME(LS-SELECTED-SCALE) DELIMITED BY '  '
+                      '  Notes: ' WS-LEN-FMT DELIMITED SIZE
+                   INTO MELODY-FILE-REC
+               WRITE MELODY-FILE-REC
+               PERFORM 290-CHECK-WRITE-STATUS
+
+               MOVE '------------------------------------------------'
+                   TO MELODY-FILE-REC
+               WRITE MELODY-FILE-REC
+               PERFORM 290-CHECK-WRITE-STATUS
+
+          *>  Notes — 8 per line, same logic as display
+               MOVE 1      TO WS-COL
+               MOVE SPACES TO WS-NOTE-LINE
+               PERFORM VARYING WS-LOOP FROM 1 BY 1
+                   UNTIL WS-LOOP > LS-MELODY-LEN
+
+                   STRING LS-N-CHAR  (WS-LOOP)
+                          LS-N-ACCID (WS-LOOP)
+                          LS-N-OCTAVE(WS-LOOP)
+                          LS-N-DUR   (WS-LOOP)
+                       DELIMITED SIZE
+                       INTO WS-NOTE-DISP
+
+                   MOVE WS-NOTE-DISP TO WS-NL-N(WS-COL)
+
+                   IF WS-COL = 8 OR WS-LOOP = LS-MELODY-LEN
+                       MOVE SPACES TO MELODY-FILE-REC
+                       MOVE WS-NOTE-LINE TO MELODY-FILE-REC
+                       WRITE MELODY-FILE-REC
+                       PERFORM 290-CHECK-WRITE-STATUS
+                       MOVE SPACES TO WS-NOTE-LINE
+                       MOVE 1 TO WS-COL
+                   ELSE
+                       ADD 1 TO WS-COL
+                   END-IF
+
+               END-PERFORM
+
+               CLOSE MELODY-FILE
+
+               IF WS-FS NOT = '00'
+                   STRING 'ERROR: close failed for ' WS-OUT-FNAME
+                       DELIMITED SIZE
+                       INTO LS-STATUS-MSG
+                   MOVE 1 TO LS-RETURN-CODE
+               ELSE
+                   STRING 'Saved to ' WS-OUT-FNAME
+                       DELIMITED SIZE
+                       INTO LS-STATUS-MSG
+               END-IF
            END-IF.
 
       *> ============================================================
@@ -263,5 +266,17 @@
                    INTO LS-STATUS-MSG
                MOVE 1 TO LS-RETURN-CODE
            END-IF.
+
+      *> ============================================================
+      *> 880-SET-FILENAME
+      *> COBOL-85 has no run-time ASSIGN, so the SELECT uses a fixed
+      *> external name; map it to the real path through the
+      *> environment (GnuCOBOL filename-mapping reads DD_<name>).
+      *> ============================================================
+       880-SET-FILENAME.
+           MOVE LOW-VALUES TO WS-PUTENV-VAL
+           STRING WS-OUT-FNAME DELIMITED BY SPACE
+               INTO WS-PUTENV-VAL
+           CALL 'putenv' USING WS-PUTENV.
 
        END PROGRAM export.

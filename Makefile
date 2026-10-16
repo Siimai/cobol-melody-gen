@@ -1,5 +1,5 @@
 COBC     = cobc
-COBFLAGS = -ffold-copy=LOWER
+COBFLAGS = -std=cobol85 -ffold-copy=LOWER
 COBCOPY  = src
 BUILDDIR = build
 BIN      = $(BUILDDIR)/melody-gen

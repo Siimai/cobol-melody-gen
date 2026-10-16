@@ -55,7 +55,7 @@
            PERFORM 700-LOAD-A-PENTA-MIN
            PERFORM 800-LOAD-E-PENTA-MIN
 
-           GOBACK.
+           EXIT PROGRAM.
 
       *> ----------------------------------------------------------
       *> Scale 1: C Major  – C D E F G A B
