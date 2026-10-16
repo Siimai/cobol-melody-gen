@@ -51,6 +51,11 @@
                10  WS-M-AC     PIC X.
                10  WS-M-OCT    PIC 9.
                10  WS-M-DUR    PIC X.
+      * --- Input card: col 1 scale (0=random), col 2-3 length ----
+       01  WS-IN.
+           05  WS-IN-SCALE     PIC 9.
+           05  WS-IN-LEN       PIC 99.
+           05  FILLER          PIC X(77).
        01  WS-OUT.
            05  WS-O-CH         PIC X.
            05  WS-O-AC         PIC X.
@@ -59,12 +64,13 @@
        PROCEDURE DIVISION.
        000-MAIN.
            PERFORM 100-SEED.
-           MOVE 4 TO WS-RANGE.
-           PERFORM 200-RANDOM.
-           COMPUTE WS-SCX = WS-PICK + 1.
-           MOVE 9 TO WS-RANGE.
-           PERFORM 200-RANDOM.
-           COMPUTE WS-LEN = WS-PICK + 8.
+           ACCEPT WS-IN.
+           MOVE WS-IN-SCALE TO WS-SCX.
+           IF WS-SCX < 1 PERFORM 150-PICK-SCALE
+           ELSE IF WS-SCX > 4 PERFORM 150-PICK-SCALE.
+           MOVE WS-IN-LEN TO WS-LEN.
+           IF WS-LEN < 8 PERFORM 160-PICK-LEN
+           ELSE IF WS-LEN > 16 PERFORM 160-PICK-LEN.
            PERFORM 300-ONE-NOTE VARYING WS-IX FROM 1 BY 1
                UNTIL WS-IX > WS-LEN.
            DISPLAY 'MELODY68 SCALE: ' WS-SC-NAME (WS-SCX).
@@ -77,6 +83,14 @@
            MOVE TIME-OF-DAY TO WS-TIME.
            COMPUTE WS-QUOT = WS-TIME / 65536.
            COMPUTE WS-SEED = WS-TIME - WS-QUOT * 65536.
+       150-PICK-SCALE.
+           MOVE 4 TO WS-RANGE.
+           PERFORM 200-RANDOM.
+           COMPUTE WS-SCX = WS-PICK + 1.
+       160-PICK-LEN.
+           MOVE 9 TO WS-RANGE.
+           PERFORM 200-RANDOM.
+           COMPUTE WS-LEN = WS-PICK + 8.
       * --- Next LCG value, then WS-PICK in 0 .. WS-RANGE-1 ------
        200-RANDOM.
            COMPUTE WS-WORK = WS-SEED * 25173 + 13849.
