@@ -23,7 +23,8 @@
        77  WS-IX               PIC 99.
        77  WS-SCX              PIC 9.
        77  WS-NX               PIC 9.
-      * --- Scale table (4 scales, 7 two-char notes each) --------
+       77  WS-TEMPO            PIC 999.
+      * --- Scale table (8 scales, 7 two-char notes each) --------
        01  SCALE-DATA.
            05  FILLER          PIC X(16) VALUE 'C MAJOR'.
            05  FILLER          PIC 9     VALUE 7.
@@ -37,8 +38,20 @@
            05  FILLER          PIC X(16) VALUE 'C PENTATONIC'.
            05  FILLER          PIC 9     VALUE 5.
            05  FILLER          PIC X(14) VALUE 'C D E G A     '.
+           05  FILLER          PIC X(16) VALUE 'D DORIAN'.
+           05  FILLER          PIC 9     VALUE 7.
+           05  FILLER          PIC X(14) VALUE 'D E F G A B C '.
+           05  FILLER          PIC X(16) VALUE 'E MINOR'.
+           05  FILLER          PIC 9     VALUE 7.
+           05  FILLER          PIC X(14) VALUE 'E F#G A B C D '.
+           05  FILLER          PIC X(16) VALUE 'A MIN PENTATONIC'.
+           05  FILLER          PIC 9     VALUE 5.
+           05  FILLER          PIC X(14) VALUE 'A C D E G     '.
+           05  FILLER          PIC X(16) VALUE 'E MIN PENTATONIC'.
+           05  FILLER          PIC 9     VALUE 5.
+           05  FILLER          PIC X(14) VALUE 'E G A B D     '.
        01  SCALE-TABLE REDEFINES SCALE-DATA.
-           05  WS-SC           OCCURS 4 TIMES.
+           05  WS-SC           OCCURS 8 TIMES.
                10  WS-SC-NAME  PIC X(16).
                10  WS-SC-CNT   PIC 9.
                10  WS-SC-N     OCCURS 7 TIMES.
@@ -51,11 +64,13 @@
                10  WS-M-AC     PIC X.
                10  WS-M-OCT    PIC 9.
                10  WS-M-DUR    PIC X.
-      * --- Input card: col 1 scale (0=random), col 2-3 length ----
+      * --- Input card: col 1 scale (0=random), col 2-3 length,
+      * --- col 4-6 tempo in BPM (40-240, else 120) ---------------
        01  WS-IN.
            05  WS-IN-SCALE     PIC 9.
            05  WS-IN-LEN       PIC 99.
-           05  FILLER          PIC X(77).
+           05  WS-IN-TEMPO     PIC 999.
+           05  FILLER          PIC X(74).
        01  WS-OUT.
            05  WS-O-CH         PIC X.
            05  WS-O-AC         PIC X.
@@ -67,14 +82,17 @@
            ACCEPT WS-IN.
            MOVE WS-IN-SCALE TO WS-SCX.
            IF WS-SCX < 1 PERFORM 150-PICK-SCALE
-           ELSE IF WS-SCX > 4 PERFORM 150-PICK-SCALE.
+           ELSE IF WS-SCX > 8 PERFORM 150-PICK-SCALE.
            MOVE WS-IN-LEN TO WS-LEN.
            IF WS-LEN < 8 PERFORM 160-PICK-LEN
            ELSE IF WS-LEN > 16 PERFORM 160-PICK-LEN.
+           MOVE WS-IN-TEMPO TO WS-TEMPO.
+           IF WS-TEMPO < 40 MOVE 120 TO WS-TEMPO
+           ELSE IF WS-TEMPO > 240 MOVE 120 TO WS-TEMPO.
            PERFORM 300-ONE-NOTE VARYING WS-IX FROM 1 BY 1
                UNTIL WS-IX > WS-LEN.
            DISPLAY 'MELODY68 SCALE: ' WS-SC-NAME (WS-SCX).
-           DISPLAY 'NOTES: ' WS-LEN.
+           DISPLAY 'NOTES: ' WS-LEN '  TEMPO: ' WS-TEMPO.
            PERFORM 400-SHOW-NOTE VARYING WS-IX FROM 1 BY 1
                UNTIL WS-IX > WS-LEN.
            STOP RUN.
@@ -84,7 +102,7 @@
            COMPUTE WS-QUOT = WS-TIME / 65536.
            COMPUTE WS-SEED = WS-TIME - WS-QUOT * 65536.
        150-PICK-SCALE.
-           MOVE 4 TO WS-RANGE.
+           MOVE 8 TO WS-RANGE.
            PERFORM 200-RANDOM.
            COMPUTE WS-SCX = WS-PICK + 1.
        160-PICK-LEN.

@@ -72,4 +72,7 @@ Everything for the mainframe lives under `mainframe/` and is separate from the G
 - Keep a status line (row 22) for messages and a key legend (row 24). Validate on Enter and show errors there, in place.
 - Under a 4K base-register limit, keep working storage in a `GETMAIN` area addressed through R13 (`DSECT`), with save-area chaining. Do not put a macro call on a labelled line (the label is not defined), and use `&L.(6)` not `&L(6)` inside macros.
 - Slow work (job submit) is done by a wrapper CLIST: the panel returns RC 4, the CLIST `SUBMIT`s, then calls the panel in a wait mode that polls the result dataset once a second (`STIMER WAIT,BINTVL`) and shows it on the same screen.
+- A dataset that was only allocated (for example by `IEFBR14`) and never written returns one bogus record on its first read. Initialise datasets that a program reads before writing with `IEBGENER` from an empty `SYSUT1` (see `jcl/init-saved.jcl`; rerunning it deletes the data).
+- A label on a macro call line is not defined by the macro. Put a `DS 0H` on its own line. Past 4K of code, load a second base register (`LA 9,4095(12)` / `LA 9,1(9)` / `USING name,12,9`) and keep loop counters off it.
+- Input fields keep their old value when redrawn, so a shorter number typed over a longer one leaves remnants. Test with `EraseEOF` before typing, as a user would.
 - Test every screen over `s3270`: read the screen after each key (`Ascii`), type with `String`/`Tab`/`Enter`/`PF(n)`, and always log off.

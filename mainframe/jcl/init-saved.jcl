@@ -1,0 +1,15 @@
+//@USER@V  JOB (1),'INITSAVED',CLASS=A,MSGCLASS=A,MSGLEVEL=(1,1),
+//         USER=@USER@,PASSWORD=@PASS@
+//* ONE-TIME: creates and empties <user>.MELODY.SAVED.  RERUNNING IT
+//* DELETES ALL SAVED MELODIES.  A dataset that was only allocated
+//* and never written returns a bogus record, so it is written once.
+//DEL      EXEC PGM=IEFBR14
+//SAVED    DD DSN=@USER@.MELODY.SAVED,DISP=(MOD,DELETE),UNIT=SYSDA,
+//            SPACE=(TRK,(1,1))
+//ALLOC    EXEC PGM=IEBGENER
+//SYSPRINT DD SYSOUT=A
+//SYSIN    DD DUMMY
+//SYSUT1   DD DUMMY,DCB=(RECFM=FB,LRECL=80,BLKSIZE=800)
+//SYSUT2   DD DSN=@USER@.MELODY.SAVED,DISP=(NEW,CATLG),UNIT=SYSDA,
+//            SPACE=(TRK,(5,5)),DCB=(RECFM=FB,LRECL=80,BLKSIZE=800)
+//
