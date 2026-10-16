@@ -1,0 +1,3 @@
+[submodule ".devcontainer"]
+	path = .devcontainer
+	url = git@github.com:Siimai/claude-devcontainer.git
