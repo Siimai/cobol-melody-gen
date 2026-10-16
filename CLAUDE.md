@@ -75,4 +75,5 @@ Everything for the mainframe lives under `mainframe/` and is separate from the G
 - A dataset that was only allocated (for example by `IEFBR14`) and never written returns one bogus record on its first read. Initialise datasets that a program reads before writing with `IEBGENER` from an empty `SYSUT1` (see `jcl/init-saved.jcl`; rerunning it deletes the data).
 - A label on a macro call line is not defined by the macro. Put a `DS 0H` on its own line. Past 4K of code, load a second base register (`LA 9,4095(12)` / `LA 9,1(9)` / `USING name,12,9`) and keep loop counters off it.
 - Input fields keep their old value when redrawn, so a shorter number typed over a longer one leaves remnants. Test with `EraseEOF` before typing, as a user would.
+- MVS cannot hand a binary file to the host. Write binary data (for example MIDI) as hex text between marker records and convert it on the host (`mainframe/midi-from-mvs.sh`, `xxd -r -p`). Check the result against an independent encoder, not just the structure.
 - Test every screen over `s3270`: read the screen after each key (`Ascii`), type with `String`/`Tab`/`Enter`/`PF(n)`, and always log off.
