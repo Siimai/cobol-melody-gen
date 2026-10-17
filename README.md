@@ -43,8 +43,12 @@ cobol/
 │   ├── midiexp.cob           binary MIDI export subprogram
 │   └── main.cob              interactive menu entry point
 ├── output/                   generated melody and MIDI files land here
-└── tests/
-    └── smoke.sh              automated smoke test
+├── tests/
+│   └── smoke.sh              automated smoke test
+└── mainframe/                COBOL-68 version for MVS 3.8j (see below)
+    ├── melody/source/        mirrors the mainframe datasets
+    ├── upload.sh             upload (and optionally build) from the host
+    └── jcl/show-midi.jcl     host-side job template for the MIDI fetch
 ```
 
 ---
@@ -172,6 +176,113 @@ bash tests/smoke.sh
 
 Exercises the full build→generate→save pipeline non-interactively and
 reports PASS/FAIL for each check.
+
+---
+
+## Mainframe version (TK4- / MVS 3.8j)
+
+`mainframe/` holds a COBOL-68 port that runs on a Hercules emulator
+running TK4- (MVS 3.8j), with a TSO line-mode menu and a full-screen 3270
+panel (assembler). It has the same 8 scales, a tempo setting, save/load of
+melodies and MIDI export.
+
+### Layout: the repo mirrors the mainframe
+
+The path under `mainframe/melody/source/` is the dataset name and the file
+name is the member (upper case, extension ignored):
+
+| Repo file | Mainframe member | Holds |
+|-----------|------------------|-------|
+| `cobol/melody68.cbl` | `MELODY.SOURCE.COBOL(MELODY68)` | the COBOL-68 program |
+| `asm/melscr.asm` | `MELODY.SOURCE.ASM(MELSCR)` | the 3270 panel |
+| `clist/melody.clist`, `melpanel.clist`, `melsetup.clist`, `melbuild.clist` | `MELODY.SOURCE.CLIST(...)` | menu, panel starter, first-run setup, build command |
+| `cntl/setup.jcl`, `melscr.jcl`, `cmdproc.jcl` | `MELODY.SOURCE.CNTL(...)` | build jobs (they read the source from the libraries) |
+
+The compiled programs go to `MELODY.LOAD`. Nothing is stored in the repo
+for it, and no source is copied inside any JCL.
+
+### Prerequisites
+
+- A running TK4- Hercules (3270 on port 3270, card reader on port 3505) and
+  `nc` on the machine you upload from.
+- A user with ALTER on `MELODY.*` (group `ADMIN`, for example HERC02) for
+  the install, and `MFHOST` set to the emulator host (`localhost` on the
+  host itself, `172.17.0.1` inside the dev container).
+- Regular users need UPDATE on `MELODY.*` only if they should rebuild:
+  they must be in the RAKF group `MELODY`. The one-time RAKF setup is
+  described in `CLAUDE.md`.
+
+### Compile from the host
+
+```bash
+export MFHOST=172.17.0.1 MFUSER=<admin user> MFPASS=<password>
+mainframe/upload.sh --build            # upload everything and build it
+mainframe/upload.sh --build melody/source/asm   # just the panel (paths are relative to mainframe/)
+mainframe/upload.sh                    # upload only, no build
+mainframe/upload.sh --dry-run --build  # print what it would send
+```
+
+`--build` runs the matching job on the mainframe once the upload is done:
+COBOL changed runs `SETUP`, assembler changed runs `MELSCR`, a CLIST
+changed runs `CMDPROC` (which copies the CLISTs into `SYS2.CMDPROC` so
+every user can type their name). The jobs run asynchronously and take
+10-20 seconds.
+
+### Compile on the mainframe
+
+Log on to TSO (3270 to `localhost:3270`, then `L <userid>`) and type at
+`READY`:
+
+```
+MELBUILD                    all three build jobs, in order
+MELBUILD WHAT(COBOL)        compile MELODY68 into MELODY.LOAD
+MELBUILD WHAT(ASM)          assemble the panel into MELODY.LOAD
+MELBUILD WHAT(CLIST)        copy the CLISTs into SYS2.CMDPROC
+```
+
+or submit a single job yourself:
+
+```
+SUBMIT 'MELODY.SOURCE.CNTL(SETUP)'
+SUBMIT 'MELODY.SOURCE.CNTL(MELSCR)'
+SUBMIT 'MELODY.SOURCE.CNTL(CMDPROC)'
+```
+
+`SETUP` creates `MELODY.LOAD`, so run it before `MELSCR` on a fresh
+system. The user needs UPDATE on `MELODY.*`, and `CMDPROC` also needs ALTER
+on `SYS2.*` (group `ADMIN`).
+
+| You changed | Upload it, then run |
+|-------------|---------------------|
+| the COBOL | `SETUP` (`MELBUILD WHAT(COBOL)`) |
+| the assembler | `MELSCR` (`MELBUILD WHAT(ASM)`) |
+| a CLIST | `CMDPROC` (`MELBUILD WHAT(CLIST)`) |
+| a job in `cntl/` | nothing; it is read when you submit it |
+
+Without the build step the change is in the library but users keep running
+the old compiled program.
+
+### Run
+
+Every user types at `READY`:
+
+```
+MELPANEL      full-screen panel: ENTER = run, PF5 = save, PF6 = list,
+              PF7 = export MIDI, PF3 = exit
+MELODY        line-mode menu
+```
+
+On first use the CLIST creates the user's own data sets
+(`<userid>.MELODY.RUNJCL`, `.OUT`, `.SAVED`, `.MIDI`), so no per-user
+install is needed. Fetch the last MIDI export as a real file on the host
+with `mainframe/midi-from-mvs.sh` (needs `MFUSER`/`MFPASS`).
+
+### Checking the result
+
+Job output is printed to the emulator's printer and is not readable from a
+container. Check a build by listing the library from TSO, for example
+`LISTDS 'MELODY.LOAD' MEMBERS` (it should show `MELODY68` and `MELSCR`), or
+by running `MELPANEL` once.
 
 ---
 
