@@ -76,7 +76,7 @@ Use standard fixed-column format strictly:
 
 ## Copybooks
 
-- Copybook members use `.cpy` extension and live in `src/`.
+- Copybook members use `.cpy` extension and live in `gnucobol/src/`.
 - `COPY` statements should appear at the top of the relevant section, before any locally defined items.
 - Do not include a period inside a copybook that would terminate an enclosing statement.
 
@@ -101,13 +101,14 @@ All plan, design, and fix-plan markdown files must be created in the `plans/` fo
 ## Build
 
 ```bash
+cd gnucobol  # or use: make -C gnucobol <target>
 make        # compile all modules
 make run    # compile and run
 make clean  # remove build/ directory
 ```
 
-- All compiler artifacts (binary and `.so` shared objects) are written to `build/`.
-- Runtime melody outputs (`.txt`, `.mid`) are written to `output/`.
-- `build/` is fully gitignored; `output/` is gitignored except for `output/.gitkeep`.
+- All compiler artifacts (binary and `.so` shared objects) are written to `gnucobol/build/`.
+- Runtime melody outputs (`.txt`, `.mid`) are written to `gnucobol/output/`.
+- `gnucobol/build/` is fully gitignored; `gnucobol/output/` is gitignored except for `gnucobol/output/.gitkeep`.
 
 Compiler: GnuCOBOL (`cobc`) is used locally; write source to be portable to IBM Enterprise COBOL. Flag any GnuCOBOL-isms with a `*> GnuCOBOL-only` comment.

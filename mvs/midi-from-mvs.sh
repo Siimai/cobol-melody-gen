@@ -4,14 +4,14 @@
 # <user>.MELODY.MIDI; this reads it over a TSO session (tso-list.py).
 # usage: midi-from-mvs.sh [OUTFILE]
 # Needs s3270 and python3. MFUSER / MFPASS / MFHOST come from the
-# environment or mainframe/.secrets/env. The user must not be logged on.
+# environment or mvs/.secrets/env. The user must not be logged on.
 set -e
 cd "$(dirname "$0")"
 . .secrets/env 2>/dev/null || true
-: "${MFUSER:?set MFUSER (or create mainframe/.secrets/env)}"
-: "${MFPASS:?set MFPASS (or create mainframe/.secrets/env)}"
+: "${MFUSER:?set MFUSER (or create mvs/.secrets/env)}"
+: "${MFPASS:?set MFPASS (or create mvs/.secrets/env)}"
 export MFUSER MFPASS MFHOST
-OUT=${1:-../output/melody_$(date +%Y%m%d_%H%M%S).mid}
+OUT=${1:-../gnucobol/output/melody_$(date +%Y%m%d_%H%M%S).mid}
 RAW=$(./tso-list.py "$MFUSER.MELODY.MIDI")
 # keep only the hex records between the markers (last export in the data set)
 HEX=$(printf '%s\n' "$RAW" | awk '

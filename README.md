@@ -30,27 +30,40 @@ make install-deps
 
 ## Project structure
 
+The repository holds two versions of the melody generator:
+
+| Folder | What it is |
+|--------|------------|
+| `gnucobol/` | the original GnuCOBOL version for macOS / Linux (everything up to the *Smoke test* section below) |
+| `mvs/` | the COBOL-68 port for MVS 3.8j on a TK4- Hercules mainframe (see *Mainframe version*) |
+
 ```
 cobol/
-├── Makefile                  build, run, clean, install-deps targets
-├── .gitignore
 ├── README.md
-├── src/
-│   ├── music_types.cpy       shared data structures (copybook)
-│   ├── scales.cob            scale definitions subprogram
-│   ├── generator.cob         melody generation subprogram
-│   ├── export.cob            display & file-save subprogram
-│   ├── midiexp.cob           binary MIDI export subprogram
-│   └── main.cob              interactive menu entry point
-├── output/                   generated melody and MIDI files land here
-├── tests/
-│   └── smoke.sh              automated smoke test
-└── mainframe/                COBOL-68 version for MVS 3.8j (see below)
+├── CLAUDE.md                 instructions for Claude Code
+├── .github/                  PR template and coding instructions
+├── .devcontainer/            dev container (Dockerfile, devcontainer.json)
+├── gnucobol/                 GnuCOBOL version
+│   ├── Makefile              build, run, clean, install-deps targets
+│   ├── src/
+│   │   ├── music_types.cpy   shared data structures (copybook)
+│   │   ├── scales.cob        scale definitions subprogram
+│   │   ├── generator.cob     melody generation subprogram
+│   │   ├── export.cob        display & file-save subprogram
+│   │   ├── midiexp.cob       binary MIDI export subprogram
+│   │   └── main.cob          interactive menu entry point
+│   ├── output/               generated melody and MIDI files land here
+│   └── tests/
+│       └── smoke.sh          automated smoke test
+└── mvs/                      MVS 3.8j version
     ├── melody/source/        mirrors the mainframe datasets
     ├── upload.sh             upload (and optionally build) from the host
     ├── tso-list.py           read a data set over a TSO session (s3270)
     └── midi-from-mvs.sh      turn the panel's MIDI export into a .mid file
 ```
+
+**The GnuCOBOL commands below are run from the `gnucobol/` folder**
+(`cd gnucobol`), or from anywhere with `make -C gnucobol <target>`.
 
 ---
 
@@ -182,14 +195,14 @@ reports PASS/FAIL for each check.
 
 ## Mainframe version (TK4- / MVS 3.8j)
 
-`mainframe/` holds a COBOL-68 port that runs on a Hercules emulator
+`mvs/` holds a COBOL-68 port that runs on a Hercules emulator
 running TK4- (MVS 3.8j), with a TSO line-mode menu and a full-screen 3270
 panel (assembler). It has the same 8 scales, a tempo setting, save/load of
 melodies and MIDI export.
 
 ### Layout: the repo mirrors the mainframe
 
-The path under `mainframe/melody/source/` is the dataset name and the file
+The path under `mvs/melody/source/` is the dataset name and the file
 name is the member (upper case, extension ignored):
 
 | Repo file | Mainframe member | Holds |
@@ -208,7 +221,7 @@ for it, and no source is copied inside any JCL.
   `nc` on the machine you upload from.
 - A user with ALTER on `MELODY.*` (group `ADMIN`, for example HERC02) for
   the install. Passwords are never stored in the repo: copy
-  `mainframe/env.example` to `mainframe/.secrets/env` (git-ignored), and `MFHOST` set to the emulator host (`localhost` on the
+  `mvs/env.example` to `mvs/.secrets/env` (git-ignored), and `MFHOST` set to the emulator host (`localhost` on the
   host itself, `172.17.0.1` inside the dev container).
 - Regular users need UPDATE on `MELODY.*` only if they should rebuild:
   they must be in the RAKF group `MELODY`. The one-time RAKF setup is
@@ -217,11 +230,11 @@ for it, and no source is copied inside any JCL.
 ### Compile from the host
 
 ```bash
-export MFHOST=172.17.0.1 MFUSER=<admin user> MFPASS=<password>   # or put them in mainframe/.secrets/env
-mainframe/upload.sh --build            # upload everything and build it
-mainframe/upload.sh --build melody/source/asm   # just the panel (paths are relative to mainframe/)
-mainframe/upload.sh                    # upload only, no build
-mainframe/upload.sh --dry-run --build  # print what it would send
+export MFHOST=172.17.0.1 MFUSER=<admin user> MFPASS=<password>   # or put them in mvs/.secrets/env
+mvs/upload.sh --build            # upload everything and build it
+mvs/upload.sh --build melody/source/asm   # just the panel (paths are relative to mvs/)
+mvs/upload.sh                    # upload only, no build
+mvs/upload.sh --dry-run --build  # print what it would send
 ```
 
 `--build` runs the matching job on the mainframe once the upload is done:
@@ -277,7 +290,7 @@ MELODY        line-mode menu
 On first use the CLIST creates the user's own data sets
 (`<userid>.MELODY.RUNJCL`, `.OUT`, `.SAVED`, `.MIDI`), so no per-user
 install is needed. Fetch the last MIDI export (PF7) as a real file with
-`mainframe/midi-from-mvs.sh [OUTFILE]`. It reads `<user>.MELODY.MIDI` over a
+`mvs/midi-from-mvs.sh [OUTFILE]` (default `gnucobol/output/`). It reads `<user>.MELODY.MIDI` over a
 TSO session, so it needs `s3270` and `python3`, and the user must not be
 logged on at the time.
 

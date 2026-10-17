@@ -69,7 +69,7 @@ def main():
     user = os.environ.get("MFUSER")
     pw = os.environ.get("MFPASS")
     if not user or not pw:
-        sys.exit("set MFUSER and MFPASS (or mainframe/.secrets/env)")
+        sys.exit("set MFUSER and MFPASS (or mvs/.secrets/env)")
 
     s = S3270()
     logged_on = False

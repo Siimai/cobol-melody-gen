@@ -7,7 +7,7 @@
 # With no PATH, every file is uploaded; otherwise only the given files or
 # directories. One throwaway job is built, sent to the card reader and
 # never stored (no source is kept inside any JCL in the repo).
-# MFUSER / MFPASS (environment or mainframe/.secrets/env): a user with ALTER
+# MFUSER / MFPASS (environment or mvs/.secrets/env): a user with ALTER
 # on MELODY.* (group ADMIN).
 # MFHOST: card reader host (default localhost; 172.17.0.1 in the container).
 # --build then runs the matching build job from melody/source/cntl on the
