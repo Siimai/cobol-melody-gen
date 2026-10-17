@@ -716,8 +716,7 @@ SUBPREP  ST    10,LNK1
          MVC   REC,BLANKS
          MVC   REC(L'T3),T3
          LA    3,REC+L'T3
-         BAL   11,INSUID
-         MVC   0(21,3),=C'.MELODY.LOAD,DISP=SHR'
+         MVC   0(20,3),=C'MELODY.LOAD,DISP=SHR'
          PUT   RJO,REC
          MVC   REC,BLANKS
          MVC   REC(L'T4),T4
