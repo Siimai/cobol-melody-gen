@@ -7,7 +7,8 @@
 # With no PATH, every file is uploaded; otherwise only the given files or
 # directories. One throwaway job is built, sent to the card reader and
 # never stored (no source is kept inside any JCL in the repo).
-# MFUSER / MFPASS: a user with ALTER on MELODY.* (group ADMIN).
+# MFUSER / MFPASS (environment or mainframe/.secrets/env): a user with ALTER
+# on MELODY.* (group ADMIN).
 # MFHOST: card reader host (default localhost; 172.17.0.1 in the container).
 # --build then runs the matching build job from melody/source/cntl on the
 # mainframe: COBOL -> setup.jcl, ASM -> melscr.jcl, CLIST -> cmdproc.jcl. The
@@ -17,6 +18,7 @@
 # --dry-run prints the job (password masked) and sends nothing.
 set -e
 cd "$(dirname "$0")"
+. .secrets/env 2>/dev/null || true
 DRY=0; BUILD=0
 while [ $# -gt 0 ]; do
   case "$1" in

@@ -206,7 +206,8 @@ for it, and no source is copied inside any JCL.
 - A running TK4- Hercules (3270 on port 3270, card reader on port 3505) and
   `nc` on the machine you upload from.
 - A user with ALTER on `MELODY.*` (group `ADMIN`, for example HERC02) for
-  the install, and `MFHOST` set to the emulator host (`localhost` on the
+  the install. Passwords are never stored in the repo: copy
+  `mainframe/env.example` to `mainframe/.secrets/env` (git-ignored), and `MFHOST` set to the emulator host (`localhost` on the
   host itself, `172.17.0.1` inside the dev container).
 - Regular users need UPDATE on `MELODY.*` only if they should rebuild:
   they must be in the RAKF group `MELODY`. The one-time RAKF setup is
@@ -215,7 +216,7 @@ for it, and no source is copied inside any JCL.
 ### Compile from the host
 
 ```bash
-export MFHOST=172.17.0.1 MFUSER=<admin user> MFPASS=<password>
+export MFHOST=172.17.0.1 MFUSER=<admin user> MFPASS=<password>   # or put them in mainframe/.secrets/env
 mainframe/upload.sh --build            # upload everything and build it
 mainframe/upload.sh --build melody/source/asm   # just the panel (paths are relative to mainframe/)
 mainframe/upload.sh                    # upload only, no build

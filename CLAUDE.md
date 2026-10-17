@@ -15,17 +15,11 @@ A Hercules emulator running TK4- (MVS 3.8j) listens on `localhost:3270`. `s3270`
 
 **Host address from the dev container:** the emulator runs on the Docker host, so inside the container `localhost` does not reach it. Use the Docker bridge gateway `172.17.0.1` instead (`Connect(172.17.0.1:3270)`; card reader `172.17.0.1:3505`; web console `http://172.17.0.1:8038`). `host.docker.internal` does not resolve here. Check with `(echo > /dev/tcp/172.17.0.1/3270) && echo open`. On the host itself, `localhost` is correct. The submit scripts (`mfsubmit.sh`, `submit.sh`) read the card reader host from `MFHOST` (default `localhost`), so run them as `MFHOST=172.17.0.1 mainframe/mfsubmit.sh ...` in the container. The container deliberately has no access to the host's `prt` files (it should work like a real mainframe user, over the network only), so those scripts can send a job but cannot show its output from the container. Read job output through a TSO session over `s3270` instead. The host-side files under `~/opt/tk4-_v1.00_current/` (including `prt/prt00e.txt`) are not visible from the container.
 
-Default TK4- TSO accounts (local emulator only, not real credentials):
+TSO accounts on this emulator: HERC01 and HERC02 (fully authorized; only HERC01 can update the RAKF users/profiles tables), HERC03 and HERC04 (regular users) and IBMUSER (recovery only). Their passwords are the TK4- defaults. They are kept out of git, in the local file `mainframe/.secrets/accounts.md`, which is imported here when it exists:
 
-| User    | Password | Notes                  |
-|---------|----------|------------------------|
-| HERC01  | <admin-pw>   | Fully authorized, full access to RAKF users/profiles tables |
-| HERC02  | <admin-pw>   | Fully authorized, no access to RAKF users/profiles tables   |
-| HERC03  | <user-pw>   | Regular user                                                |
-| HERC04  | <user-pw>   | Regular user                                                |
-| IBMUSER | <ibmuser-pw>  | Fully authorized, no RAKF access; recovery use only         |
+@mainframe/.secrets/accounts.md
 
-These come from the TK4- documentation. Verified against this instance: HERC01/<admin-pw> and HERC02/<admin-pw> log on to TSO. HERC03 and HERC04 also log on. IBMUSER is untested. Always send `LOGOFF` before disconnecting; otherwise the userid stays "IN USE" until cancelled from the MVS console (`/C U=<userid>`, web console at `http://localhost:8038`).
+The scripts read `MFUSER`, `MFPASS` and `MFHOST` from the environment, or from `mainframe/.secrets/env` (template: `mainframe/env.example`). Never write a password into a tracked file. Always send `LOGOFF` before disconnecting; otherwise the userid stays "IN USE" until cancelled from the MVS console (`/C U=<userid>`, web console at `http://localhost:8038`).
 
 ### Mainframe layout and tooling
 
@@ -33,7 +27,7 @@ Everything for the mainframe lives under `mainframe/` and is separate from the G
 
 - `melody/source/` mirrors the mainframe: the path is the dataset name and the file is the member, so `melody/source/cobol/melody68.cbl` is `MELODY.SOURCE.COBOL(MELODY68)`. The member name is the file name in upper case (the extension is only for editors). The libraries are `cobol` (COBOL-68 program), `asm` (full-screen panel `melscr.asm`), `clist` (`melody`, `melpanel`, `melsetup`) and `cntl` (build and install jobs). `MELODY.LOAD` and the per-user data sets are not in the repo.
 - `upload.sh [--dry-run] [PATH...]` sends the tree (or only the given files or directories) to the mainframe with one throwaway job that it builds on the fly. Run it as `MFHOST=172.17.0.1 MFUSER=<admin user> MFPASS=<password> mainframe/upload.sh`; the user needs ALTER on `MELODY.*` (group ADMIN). No source is stored inside any JCL: the jobs in `melody/source/cntl` read it from the libraries (`COB.SYSIN DD DSN=MELODY.SOURCE.COBOL(MELODY68)`) and have a plain job card, so they are run on the mainframe with `SUBMIT 'MELODY.SOURCE.CNTL(SETUP)'` (TSO adds the user ID).
-- `jcl/*.jcl` (only `show-midi.jcl` now) are job templates for the host with `@USER@` / `@PASS@` placeholders. `mfsubmit.sh JOBFILE [WAIT]` fills them in (`MFUSER` / `MFPASS`, default HERC03) and sends the job to the card reader on port 3505. It then prints the new output from `~/opt/tk4-_v1.00_current/prt/prt00e.txt`.
+- `jcl/*.jcl` (only `show-midi.jcl` now) are job templates for the host with `@USER@` / `@PASS@` placeholders. `mfsubmit.sh JOBFILE [WAIT]` fills them in (`MFUSER` / `MFPASS`, default user HERC03; the password comes from the environment or `mainframe/.secrets/env`) and sends the job to the card reader on port 3505. It then prints the new output from `~/opt/tk4-_v1.00_current/prt/prt00e.txt`.
 - Never commit real credentials. Use the placeholders.
 
 ### Best practices learned
