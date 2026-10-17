@@ -48,7 +48,8 @@ cobol/
 └── mainframe/                COBOL-68 version for MVS 3.8j (see below)
     ├── melody/source/        mirrors the mainframe datasets
     ├── upload.sh             upload (and optionally build) from the host
-    └── jcl/show-midi.jcl     host-side job template for the MIDI fetch
+    ├── tso-list.py           read a data set over a TSO session (s3270)
+    └── midi-from-mvs.sh      turn the panel's MIDI export into a .mid file
 ```
 
 ---
@@ -275,8 +276,10 @@ MELODY        line-mode menu
 
 On first use the CLIST creates the user's own data sets
 (`<userid>.MELODY.RUNJCL`, `.OUT`, `.SAVED`, `.MIDI`), so no per-user
-install is needed. Fetch the last MIDI export as a real file on the host
-with `mainframe/midi-from-mvs.sh` (needs `MFUSER`/`MFPASS`).
+install is needed. Fetch the last MIDI export (PF7) as a real file with
+`mainframe/midi-from-mvs.sh [OUTFILE]`. It reads `<user>.MELODY.MIDI` over a
+TSO session, so it needs `s3270` and `python3`, and the user must not be
+logged on at the time.
 
 ### Checking the result
 
