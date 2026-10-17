@@ -1,8 +1,8 @@
-//@USER@P  JOB (1),'CMDPROC',CLASS=A,MSGCLASS=A,MSGLEVEL=(1,1),
-//         USER=@USER@,PASSWORD=@PASS@
+//MELCMD   JOB (1),'MELODY',CLASS=A,MSGCLASS=A
 //* Copies the shared CLISTs into SYS2.CMDPROC so that every user can
-//* type MELPANEL or MELODY (both call MELSETUP).  Needs ALTER on SYS2.* (group ADMIN).
-//* Rerun after changing the CLISTs; run install-cntl.jcl first.
+//* type MELPANEL or MELODY.  Needs ALTER on SYS2.* (group ADMIN).
+//* Run it with  SUBMIT 'MELODY.SOURCE.CNTL(CMDPROC)'  after changing
+//* a CLIST and uploading it.
 //PANEL    EXEC PGM=IEBGENER
 //SYSPRINT DD SYSOUT=A
 //SYSIN    DD DUMMY

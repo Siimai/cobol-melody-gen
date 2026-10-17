@@ -10,7 +10,7 @@ START=$(stat -c %s "$PRT")
   echo "//MELODY68 JOB (1),'MELODY',CLASS=A,MSGCLASS=A,MSGLEVEL=(1,1)"
   echo "//STEP1    EXEC COBUCG"
   echo "//COB.SYSIN DD *"
-  cat melody68.cob
+  cat melody/source/cobol/melody68.cbl
   echo "/*"
   echo "//GO.SYSOUT DD SYSOUT=A"
   echo "//GO.SYSIN DD *"
