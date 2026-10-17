@@ -55,6 +55,7 @@
   .c { color: var(--cyan); text-shadow: 0 0 10px rgba(127,216,255,.3); }
   .d { color: var(--dim); text-shadow: none; }
   .f { background: var(--field-bg); color: var(--bright); }
+  .hl { background: var(--accent); color: #04120a; text-shadow: none; }
   .cur { background: var(--text); color: #04120a; text-shadow: none; }
   #scan {
     position: absolute; inset: 52px 0 0 0; pointer-events: none;
@@ -123,17 +124,20 @@ const T = [
   {f:'save',        d:2.5, h:'PF5 saves the melody'},
   {f:'midi',        d:2.7, h:'PF7 exports a standard MIDI file', s:''},
   {f:'list',        d:3.2, h:'PF6 lists the saved melodies'},
+  {f:'run1',        d:10,  play:1, h:'Now listen', s:'the generated melody, played back'},
 ];
 const INTRO = 3.2, OUTRO = 3.6, FADE = 0.6;
-let starts = [], tTerm = 0;
-(function(){ let a = INTRO; T.forEach(x => { starts.push(a); a += x.d; }); tTerm = a; })();
-const TOTAL = tTerm + OUTRO;
-
-function pad(r){
-  // blank third-party e-mail addresses in the TK4- banner
-  r = (r||'').replace(/\S+@\S+/g, m => ' '.repeat(m.length));
-  return r.padEnd(COLS,' ').slice(0,COLS);
+const LEAD = 0.7;            // seconds of the play segment before the first note
+let M = null, starts = [], tTerm = 0, TOTAL = 0, audioStart = 0;
+function layout(){
+  const p = T.find(x=>x.play);
+  p.d = LEAD + M.length + 1.4;                 // the ring-out fades under the outro
+  starts = []; let a = INTRO; T.forEach(x => { starts.push(a); a += x.d; }); tTerm = a;
+  TOTAL = tTerm + OUTRO;
+  audioStart = starts[T.indexOf(p)] + LEAD;
 }
+
+function pad(r){ return (r||'').padEnd(COLS,' ').slice(0,COLS); }
 function esc(c){ return c==='<'?'&lt;':c==='&'?'&amp;':c; }
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
@@ -177,7 +181,7 @@ function screenAt(i, tin){
   return {fr, rows, cur};
 }
 
-function draw(fr, rows, cur, blink){
+function draw(fr, rows, cur, blink, hl){
   const fieldRows = new Set([10,11,12]);
   const isPanel = /MELODY68/.test(fr.rows[0]||'') && /SCALE/.test(fr.rows[10]||'');
   let html = '';
@@ -188,6 +192,7 @@ function draw(fr, rows, cur, blink){
       let ch = esc(rows[r][c]);
       const isCur = cur && cur[0]===r && cur[1]===c && blink;
       if(isCur) ch = '<span class="cur">'+(ch===' '?' ':ch)+'</span>';
+      else if(hl && hl.row===r && c>=hl.col && c<hl.col+4) ch = '<span class="hl">'+ch+'</span>';
       else if(isPanel && fieldRows.has(r) && c>=14 && c<=17) ch = '<span class="f">'+ch+'</span>';
       line += ch;
     }
@@ -212,9 +217,15 @@ function render(t){
   const tin = t - starts[i];
   const idx = F.findIndex(x=>x.tag===T[i].f);
   if(t >= INTRO-FADE && t < tTerm){
-    const {fr, rows, cur} = screenAt(idx, tin);
+    let {fr, rows, cur} = screenAt(idx, tin);
     const blink = (Math.floor(t/0.53)%2===0) || (T[i].type && tin < T[i].tt);
-    term.innerHTML = draw(fr, rows, cur, blink);
+    let hl = null;
+    if(T[i].play){
+      const tm = tin - LEAD;
+      hl = M.notes.find(n => tm >= n.start && tm < n.start + n.dur) || null;
+      cur = null;
+    }
+    term.innerHTML = draw(fr, rows, cur, blink, hl);
     // caption
     const seg = T[i];
     const a = clamp(tin/0.35,0,1) * (1 - clamp((tin-(seg.d-0.3))/0.3,0,1));
@@ -242,7 +253,9 @@ function fillCaptions(user){
   const b = /(\d+) BYTES/.exec((get('midi').rows[21]||''));
   if(b) seg('midi').s = b[1] + ' bytes, ready for any DAW';
 }
-window.ready = fetch('build/frames.json').then(r=>r.json()).then(j=>{ F = j.frames; fillCaptions(j.user); render(0); return true; });
+window.timeline = () => ({audioStart, total: TOTAL});
+window.ready = Promise.all([fetch('build/frames.json').then(r=>r.json()), fetch('build/melody.json').then(r=>r.json())])
+  .then(([j, m]) => { F = j.frames; M = m; layout(); fillCaptions(j.user); render(0); return true; });
 window.render = render;
 </script>
 </body>

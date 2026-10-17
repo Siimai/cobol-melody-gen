@@ -24,6 +24,9 @@ const srv = http.createServer((q, r) => {
   await p.evaluate(() => window.ready);
   await p.evaluate(() => document.fonts.ready);
   const total = await p.evaluate(() => window.TOTAL());
+  const tl = await p.evaluate(() => window.timeline());
+  fs.mkdirSync(path.join(D, 'build'), { recursive: true });
+  fs.writeFileSync(path.join(D, 'build', 'timeline.json'), JSON.stringify(tl));
   const out = path.join(D, 'build', only ? 'preview' : 'png');
   fs.mkdirSync(out, { recursive: true });
   if (only) {
