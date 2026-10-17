@@ -1,5 +1,5 @@
 #!/bin/bash
-# usage: upload.sh [--dry-run] [PATH...]
+# usage: upload.sh [--dry-run] [--build] [PATH...]
 # Uploads the source tree under melody/source to the mainframe. The path
 # is the dataset name and the file is the member:
 #   melody/source/cobol/melody68.cbl -> MELODY.SOURCE.COBOL(MELODY68)
@@ -9,11 +9,22 @@
 # never stored (no source is kept inside any JCL in the repo).
 # MFUSER / MFPASS: a user with ALTER on MELODY.* (group ADMIN).
 # MFHOST: card reader host (default localhost; 172.17.0.1 in the container).
+# --build then runs the matching build job from melody/source/cntl on the
+# mainframe: COBOL -> setup.jcl, ASM -> melscr.jcl, CLIST -> cmdproc.jcl. The
+# jobs are the repo files; USER= and PASSWORD= are added to their job card
+# only when they are sent. MFWAIT seconds (default 10) pass between jobs so
+# that each finishes before the next starts.
 # --dry-run prints the job (password masked) and sends nothing.
 set -e
 cd "$(dirname "$0")"
-DRY=0
-if [ "$1" = "--dry-run" ]; then DRY=1; shift; fi
+DRY=0; BUILD=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dry-run) DRY=1; shift;;
+    --build) BUILD=1; shift;;
+    *) break;;
+  esac
+done
 MFHOST=${MFHOST:-localhost}
 if [ $DRY = 0 ]; then
   : "${MFUSER:?set MFUSER to a user with ALTER on MELODY.*}"
@@ -76,3 +87,21 @@ else
   echo "sent $COUNT members to $(echo "$LIBS" | wc -l) libraries as $MFUSER:" >&2
 fi
 for f in $FILES; do echo "  $(dsn_of "$f")($(member_of "$f"))"; done >&2
+
+if [ $BUILD = 1 ]; then
+  JOBS=""
+  for want in "COBOL setup" "ASM melscr" "CLIST cmdproc"; do
+    lib=MELODY.SOURCE.${want%% *}
+    if echo "$LIBS" | grep -qx "$lib"; then JOBS="$JOBS ${want##* }"; fi
+  done
+  for j in $JOBS; do
+    jf=melody/source/cntl/$j.jcl
+    if [ $DRY = 1 ]; then echo "would run MELODY.SOURCE.CNTL($(echo $j | tr a-z A-Z)) ($jf)" >&2; continue; fi
+    sleep "${MFWAIT:-10}"
+    { head -1 "$jf" | sed 's/$/,/'
+      echo "//         USER=$MFUSER,PASSWORD=$MFPASS"
+      tail -n +2 "$jf"; } | nc -q1 "$MFHOST" 3505
+    echo "sent build job $j as $MFUSER" >&2
+  done
+  [ -n "$JOBS" ] || echo "nothing to build for these files" >&2
+fi
