@@ -13,3 +13,6 @@ plans/
 
 # Local secrets (never commit)
 mainframe/.secrets/
+
+# Local tool config
+zapp.yaml
