@@ -29,6 +29,7 @@ cat <<'JCL'
 JCL
 copy MELODY.SOURCE.CLIST MELODY   melody.clist
 copy MELODY.SOURCE.CLIST MELPANEL melpanel.clist
+copy MELODY.SOURCE.CLIST MELSETUP melsetup.clist
 copy MELODY.SOURCE.CNTL  INITSAVE jcl/init-saved.jcl
 copy MELODY.SOURCE.CNTL  INSTPANL jcl/install-panel.jcl
 copy MELODY.SOURCE.CNTL  INSTALL  jcl/install.jcl

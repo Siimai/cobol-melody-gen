@@ -14,6 +14,7 @@
 //SYSUT1   DD DATA,DLM=ZZ
 PROC 0
 CONTROL NOFLUSH
+%MELSETUP
 SET &SL = &STR(/)
 MENU: WRITE
 WRITE  =============================================
