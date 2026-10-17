@@ -8,6 +8,7 @@
     "CLAUDE_CONFIG_DIR": "/home/ubuntu/.claude"
   },
   "mounts": [
-    "source=claude-config,target=/home/ubuntu/.claude,type=volume"
+    "source=claude-config,target=/home/ubuntu/.claude,type=volume",
+    "source=gh-config,target=/home/ubuntu/.config/gh,type=volume"
   ]
 }

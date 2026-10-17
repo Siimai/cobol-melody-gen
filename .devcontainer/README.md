@@ -7,8 +7,10 @@
 A reusable [Dev Container](https://containers.dev/) base for working with Claude
 Code: Ubuntu 26.04 with git, Node, Python, audio/video tooling (ffmpeg, csound,
 sox, SuperCollider), image/font tooling, Playwright + Chromium, Remotion, and
-the Claude Code CLI itself. Claude's config lives on a named Docker volume so
-it survives container rebuilds.
+the GitHub CLI (`gh`), and the Claude Code CLI itself. Claude's config
+(`claude-config`) and the `gh` login (`gh-config`, mounted at `~/.config/gh`)
+live on named Docker volumes so they survive container rebuilds. After the
+first rebuild run `gh auth login` once.
 
 ## Reusing it in another project (git submodule)
 

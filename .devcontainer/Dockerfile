@@ -47,12 +47,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && command -v s3270 nc
 
+# GitHub CLI (gh) for issues and pull requests. Kept after the other apt layers
+# so they stay cached.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      gh \
+    && rm -rf /var/lib/apt/lists/* \
+    && command -v gh
+
 # Ubuntu images already include a non-root user "ubuntu" (UID 1000)
 USER ubuntu
 ENV PATH="/home/ubuntu/.local/bin:${PATH}"
 
-# Pre-create the config dir so the named volume inherits correct ownership
-RUN mkdir -p /home/ubuntu/.claude
+# Pre-create the config dirs so the named volumes inherit correct ownership
+# (~/.config/gh holds the gh login)
+RUN mkdir -p /home/ubuntu/.claude /home/ubuntu/.config/gh
 
 # Install Claude Code (native installer)
 RUN curl -fsSL https://claude.ai/install.sh | bash
