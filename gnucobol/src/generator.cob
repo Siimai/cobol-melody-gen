@@ -68,7 +68,7 @@
            PERFORM 100-SEED-RANDOM
            PERFORM 200-PICK-LENGTH
            PERFORM 300-GENERATE-NOTES
-           GOBACK.
+           EXIT PROGRAM.
 
       *> ----------------------------------------------------------
       *> Seed FUNCTION RANDOM from the current time (HHMMSS).

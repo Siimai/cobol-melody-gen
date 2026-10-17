@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MELODY68 demo</title>
+<style>
+  :root {
+    --bg-top: #101a2e;
+    --bg-bot: #05070d;
+    --win: #0a0f0c;
+    --win-bar: #161d1a;
+    --text: #62d98c;
+    --bright: #e4ffee;
+    --amber: #ffcf6b;
+    --cyan: #7fd8ff;
+    --dim: #3f8a5c;
+    --field-bg: #1d4a30;
+    --cap: #f2f6ff;
+    --cap-sub: #9fb2d6;
+    --accent: #5be09a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: #05070d; }
+  #stage {
+    position: relative; width: 1920px; height: 1080px; overflow: hidden;
+    background:
+      radial-gradient(1200px 700px at 50% 38%, #16294a 0%, rgba(22,41,74,0) 70%),
+      linear-gradient(180deg, var(--bg-top), var(--bg-bot));
+    font-family: "Inter", "DejaVu Sans", sans-serif;
+  }
+  #win {
+    position: absolute; left: 306px; top: 46px; width: 1308px; height: 888px;
+    background: var(--win); border-radius: 18px; overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.07),
+                0 0 90px rgba(91,224,154,.10);
+  }
+  #bar {
+    height: 52px; background: var(--win-bar); display: flex; align-items: center;
+    padding: 0 22px; border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .dot { width: 14px; height: 14px; border-radius: 50%; margin-right: 10px; }
+  #bar .title {
+    flex: 1; text-align: center; color: #8ea39a; font-size: 17px; letter-spacing: .04em;
+    margin-right: 78px;
+  }
+  #term {
+    position: absolute; left: 0; right: 0; top: 52px; bottom: 0; padding: 26px 24px 0 24px;
+    font-family: "Fira Code", "DejaVu Sans Mono", monospace; font-size: 25px;
+    line-height: 33px; color: var(--text); white-space: pre; font-variant-ligatures: none;
+    text-shadow: 0 0 10px rgba(98,217,140,.35);
+  }
+  #term .row { height: 33px; }
+  .b { color: var(--bright); text-shadow: 0 0 12px rgba(228,255,238,.35); }
+  .a { color: var(--amber); text-shadow: 0 0 10px rgba(255,207,107,.3); }
+  .c { color: var(--cyan); text-shadow: 0 0 10px rgba(127,216,255,.3); }
+  .d { color: var(--dim); text-shadow: none; }
+  .f { background: var(--field-bg); color: var(--bright); }
+  .hl { background: var(--accent); color: #04120a; text-shadow: none; }
+  #badge {
+    position: absolute; right: 26px; top: 70px; padding: 8px 18px; border-radius: 999px;
+    font-size: 19px; letter-spacing: .08em; font-weight: 600; opacity: 0;
+    color: #1b1300; background: var(--amber); box-shadow: 0 0 26px rgba(255,207,107,.35);
+  }
+  #badge span { font-weight: 500; letter-spacing: .02em; opacity: .8; }
+  .fn { position: absolute; left: 0; right: 0; bottom: 56px; text-align: center;
+        color: var(--cap-sub); opacity: .75; font-size: 22px; letter-spacing: .02em; }
+  .cur { background: var(--text); color: #04120a; text-shadow: none; }
+  #scan {
+    position: absolute; inset: 52px 0 0 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0, rgba(0,0,0,.14) 1px, transparent 1px, transparent 3px);
+  }
+  #cap {
+    position: absolute; left: 0; width: 1920px; top: 958px; text-align: center;
+  }
+  #cap .h { color: var(--cap); font-size: 40px; font-weight: 600; letter-spacing: -.01em; }
+  #cap .s { color: var(--cap-sub); font-size: 24px; margin-top: 8px; }
+  #cap .h b { color: var(--accent); font-weight: 600; }
+  /* title and end cards */
+  .card {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+  }
+  .card .k { color: var(--accent); font-size: 26px; letter-spacing: .28em; text-transform: uppercase; font-weight: 600; }
+  .card .t { color: #fff; font-size: 104px; font-weight: 700; letter-spacing: -.03em; margin-top: 26px;
+             font-family: "Fira Code", monospace; }
+  .card .u { color: var(--cap-sub); font-size: 36px; margin-top: 30px; line-height: 1.45; }
+  .card .u b { color: var(--cap); font-weight: 600; }
+  .tags { display: flex; gap: 16px; margin-top: 44px; }
+  .tag { border: 1px solid rgba(255,255,255,.18); color: #cfe0ff; font-size: 24px; padding: 10px 22px;
+         border-radius: 999px; background: rgba(255,255,255,.04); }
+  #wm { position: absolute; right: 36px; top: 28px; color: rgba(255,255,255,.35); font-size: 18px; letter-spacing: .12em; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="win" style="opacity:0">
+    <div id="bar">
+      <span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span>
+      <div class="title">TSO &nbsp;·&nbsp; TK4- &nbsp;·&nbsp; MVS 3.8j &nbsp;·&nbsp; 3270 terminal</div>
+    </div>
+    <div id="term"></div>
+    <div id="scan"></div>
+    <div id="badge">♪ PLAYBACK <span>· audio added in post</span></div>
+  </div>
+  <div id="cap" style="opacity:0"><div class="h"></div><div class="s"></div></div>
+  <div class="card" id="intro" style="opacity:0">
+    <div class="k">COBOL-68 &nbsp;on&nbsp; MVS 3.8j</div>
+    <div class="t">MELODY68</div>
+    <div class="u">A melody generator for a <b>1970s mainframe</b></div>
+    <div class="fn">The soundtrack is playback added in post-production. MELODY68 itself does not play sound.</div>
+  </div>
+  <div class="card" id="outro" style="opacity:0">
+    <div class="k">Generate · Save · Export</div>
+    <div class="t">MELODY68</div>
+    <div class="u">COBOL-68 engine &nbsp;·&nbsp; assembler 3270 panel<br>running on Hercules / TK4-</div>
+    <div class="tags"><span class="tag">COBOL-68</span><span class="tag">MVS 3.8j</span><span class="tag">TSO</span><span class="tag">MIDI</span></div>
+    <div class="fn">The soundtrack is playback added in post-production. MELODY68 itself does not play sound.</div>
+  </div>
+</div>
+<script>
+let F = null;
+const COLS = 80, ROWS = 24;
+
+/* Timeline: seconds. type = animate the changed cells from the previous screen. */
+const T = [
+  {f:'vtam',        d:3.2, h:'A real mainframe OS, emulated', s:'MVS 3.8j on the Hercules emulator', hold:0.0},
+  {f:'vtam-typed',  d:2.4, type:1, tt:0.9, h:'Log on to TSO', s:''},
+  {f:'pw-prompt',   d:1.8, h:'Password', s:'the terminal never echoes it'},
+  {f:'welcome',     d:2.4, h:'Welcome to TSO'},
+  {f:'ready',       d:1.3, h:'At the READY prompt…'},
+  {f:'melpanel-typed', d:2.3, type:1, tt:1.2, h:'…start the full-screen panel', s:'MELPANEL'},
+  {f:'panel',       d:3.4, h:'A 3270 panel written in assembler', s:'COBOL-68 is the engine behind it'},
+  {f:'filled',      d:3.0, type:1, tt:1.7, h:'Pick a scale, note count and tempo', s:''},
+  {f:'run1',        d:5.2, melody:1, h:'ENTER runs the COBOL-68 program', s:''},
+  {f:'save',        d:2.6, h:'PF5 saves the melody'},
+  {f:'midi',        d:3.4, h:'PF7 exports a standard MIDI file', s:''},
+  {f:'list',        d:3.2, h:'PF6 lists the saved melodies'},
+];
+const INTRO = 3.2, OUTRO = 4.4, FADE = 0.6;
+const MIN_LEAD = 0.8;        // earliest the melody may start after its screen appears
+let M = null, starts = [], tTerm = 0, TOTAL = 0, melodyStart = 0;
+/* The backing track has a bar line every barLen seconds from t=0 (bpm from the
+   panel). The melody starts on the first bar line after its screen appears, so
+   picture, melody and backing share one clock. */
+function layout(){
+  const barLen = 240 / M.bpm;
+  starts = []; let a = INTRO;
+  T.forEach(x => {
+    starts.push(a);
+    if(x.melody) melodyStart = Math.ceil((a + MIN_LEAD) / barLen - 1e-9) * barLen;
+    a += x.d;
+  });
+  tTerm = a; TOTAL = tTerm + OUTRO;
+}
+
+function pad(r){ return (r||'').padEnd(COLS,' ').slice(0,COLS); }
+function esc(c){ return c==='<'?'&lt;':c==='&'?'&amp;':c; }
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
+
+/* colour classes by row for the panel screens */
+function rowClass(fr, r){
+  const rows = fr.rows;
+  if(/MELODY68/.test(rows[0]||'') || /ENTER=/.test(rows[23]||'')){
+    if(r===0) return 'b';
+    if(r===1) return 'd';
+    if(r===3 || r===2) return 'a';
+    if(r===14) return 'a';
+    if(r>=15 && r<=17) return 'b';
+    if(r===21) return 'c';
+    if(r===23) return 'a';
+    return '';
+  }
+  if(/LOGON IN PROGRESS|READY|TSO Applications/.test((rows.join('\n')))) return '';
+  return '';
+}
+
+function screenAt(i, tin){
+  const fr = F[i];
+  let rows = fr.rows.map(pad);
+  let cur = fr.cursor;
+  const type = T.find(x=>x.f===fr.tag);
+  if(type && type.type){
+    const prev = F[i-1].rows.map(pad);
+    const cells = [];
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(rows[r][c]!==prev[r][c]) cells.push([r,c]);
+    const k = Math.floor(clamp(tin/type.tt,0,1)*cells.length + 1e-6);
+    const out = prev.map(x=>x.split(''));
+    for(let j=0;j<k;j++){ const [r,c]=cells[j]; out[r][c]=rows[r][c]; }
+    rows = out.map(x=>x.join(''));
+    if(cells.length){
+      const last = cells[Math.max(0,k-1)] || cells[0];
+      cur = k===0 ? F[i-1].cursor : [last[0], Math.min(last[1]+1, COLS-1)];
+      if(k>=cells.length) cur = fr.cursor;
+    }
+  }
+  return {fr, rows, cur};
+}
+
+function draw(fr, rows, cur, blink, hl){
+  const fieldRows = new Set([10,11,12]);
+  const isPanel = /MELODY68/.test(fr.rows[0]||'') && /SCALE/.test(fr.rows[10]||'');
+  let html = '';
+  for(let r=0;r<ROWS;r++){
+    const cls = rowClass(fr, r);
+    let line = '';
+    for(let c=0;c<COLS;c++){
+      let ch = esc(rows[r][c]);
+      const isCur = cur && cur[0]===r && cur[1]===c && blink;
+      if(isCur) ch = '<span class="cur">'+(ch===' '?' ':ch)+'</span>';
+      else if(hl && hl.row===r && c>=hl.col && c<hl.col+4) ch = '<span class="hl">'+ch+'</span>';
+      else if(isPanel && fieldRows.has(r) && c>=14 && c<=17) ch = '<span class="f">'+ch+'</span>';
+      line += ch;
+    }
+    html += '<div class="row '+cls+'">'+line+'</div>';
+  }
+  return html;
+}
+
+function render(t){
+  const stage = document.getElementById('stage');
+  const win = document.getElementById('win'), term = document.getElementById('term');
+  const cap = document.getElementById('cap'), intro = document.getElementById('intro'), outro = document.getElementById('outro');
+  // intro
+  intro.style.opacity = t < INTRO ? (t < .5 ? ease(t/.5) : (t > INTRO-FADE ? 1-ease((t-(INTRO-FADE))/FADE) : 1)) : 0;
+  intro.style.transform = 'translateY('+((1-clamp(t/1.0,0,1))*14)+'px)';
+  // terminal window
+  const wIn = clamp((t-(INTRO-FADE))/FADE,0,1), wOut = clamp((t-(tTerm-0.2))/FADE,0,1);
+  win.style.opacity = ease(wIn)*(1-ease(wOut));
+  win.style.transform = 'translateY('+((1-ease(wIn))*18)+'px) scale('+(0.985+0.015*ease(wIn))+')';
+  // which segment
+  let i = 0; for(let k=0;k<T.length;k++) if(t >= starts[k]) i = k;
+  const tin = t - starts[i];
+  const idx = F.findIndex(x=>x.tag===T[i].f);
+  if(t >= INTRO-FADE && t < tTerm){
+    let {fr, rows, cur} = screenAt(idx, tin);
+    const blink = (Math.floor(t/0.53)%2===0) || (T[i].type && tin < T[i].tt);
+    let hl = null;
+    if(/NOTES:\s*\d+/.test(fr.rows[14]||'') && t >= melodyStart){
+      const tm = t - melodyStart;
+      hl = M.notes.find(n => tm >= n.start && tm < n.start + n.dur) || null;
+    }
+    term.innerHTML = draw(fr, rows, cur, blink, hl);
+    // caption
+    const seg = T[i];
+    const a = clamp(tin/0.35,0,1) * (1 - clamp((tin-(seg.d-0.3))/0.3,0,1));
+    cap.style.opacity = (seg.h && t>=INTRO) ? a : 0;
+    cap.style.transform = 'translateY('+((1-clamp(tin/0.35,0,1))*10)+'px)';
+    cap.children[0].innerHTML = seg.h || '';
+    cap.children[1].innerHTML = seg.s || '';
+  } else cap.style.opacity = 0;
+  // playback badge: while the melody sounds
+  const bd = document.getElementById('badge');
+  bd.style.opacity = clamp((t-(melodyStart-0.2))/0.4,0,1) * (1 - clamp((t-(melodyStart+M.length+0.4))/0.5,0,1));
+  // outro
+  const o = t - tTerm;
+  outro.style.opacity = o > 0.25 ? ease(clamp((o-0.25)/0.7,0,1)) * (1 - clamp((t-(TOTAL-0.5))/0.5,0,1)) : 0;
+}
+window.TOTAL = () => TOTAL;
+/* captions that quote the recording: read them from the captured screens */
+function fillCaptions(user){
+  const get = tag => F.find(x=>x.tag===tag);
+  const seg = tag => T.find(x=>x.f===tag);
+  seg('vtam-typed').s = 'user ' + user;
+  const m = /SCALE: (.+?)\s+NOTES: (\d+)\s+TEMPO: (\d+)/.exec((get('run1').rows[14]||''));
+  if(m){
+    const name = m[1].toLowerCase().replace(/^./, c => c.toUpperCase());
+    seg('filled').s = name + ' · ' + m[2] + ' notes · ' + m[3] + ' BPM';
+    seg('run1').s = m[2] + ' notes drawn from ' + name.replace(/^./, c => c.toLowerCase());
+  }
+  const b = /(\d+) BYTES/.exec((get('midi').rows[21]||''));
+  if(b) seg('midi').s = b[1] + ' bytes, ready for any DAW';
+}
+window.timeline = () => ({melodyStart, total: TOTAL, bpm: M.bpm});
+window.ready = Promise.all([fetch('build/frames.json').then(r=>r.json()), fetch('build/melody.json').then(r=>r.json())])
+  .then(([j, m]) => { F = j.frames; M = m; layout(); fillCaptions(j.user); render(0); return true; });
+window.render = render;
+</script>
+</body>
+</html>

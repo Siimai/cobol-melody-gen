@@ -1,12 +1,21 @@
 # Compiler artifacts (binary + shared objects)
-build/
+gnucobol/build/
 
 # Generated melody output files (keep the directory, not the contents)
-output/*
-!output/.gitkeep
+gnucobol/output/*
+!gnucobol/output/.gitkeep
 
 # Plan drafts — local only; promoted to GitHub issues when approved
 plans/
 
 # macOS
 .DS_Store
+
+# Local secrets (never commit)
+mvs/.secrets/
+
+# Local tool config
+zapp.yaml
+
+# Local Claude Code settings
+.claude/settings.local.json

@@ -17,7 +17,7 @@ Use these details for all GitHub interactions (listing issues, creating pull req
 Plan files in `plans/` are **local drafts only** — they are git-ignored and never committed.
 
 1. **Draft in `plans/`** — create a markdown file (e.g., `plans/my-feature.md`) to capture the proposed approach, sub-tasks, and any before/after details.
-   - All file references in plan files must use **relative paths** (e.g., `src/main.cob`, `output/`). Never use absolute paths (e.g., `/Users/name/project/src/main.cob`).
+   - All file references in plan files must use **relative paths** (e.g., `gnucobol/src/main.cob`, `gnucobol/output/`). Never use absolute paths (e.g., `/Users/name/project/src/main.cob`).
 2. **Iterate locally** — refine the plan until it is ready for implementation.
 3. **Promote to a GitHub issue** — once the plan is approved, create a GitHub issue via the GitHub tool using the plan content as the issue body. The issue becomes the single source of truth; the local file can be deleted.
 4. **Do not commit plan files** — `plans/` is in `.gitignore`. Only the resulting GitHub issue is tracked.
@@ -34,7 +34,7 @@ Follow this process for every GitHub issue:
 
 4. **Implement all fixes** — apply every change described in the issue, in one focused commit. Do not include unrelated edits (e.g., instruction files that happened to be dirty).
 
-5. **Verify the build passes** — run `make` and confirm it exits with code 0 before committing. Fix any build errors first, then commit.
+5. **Verify the build passes** — run `make -C gnucobol` and confirm it exits with code 0 before committing. Fix any build errors first, then commit.
 
 5a. **Update README.md** — for every user-visible change, update the relevant section before committing:
    - New or removed menu options → update the menu screenshot in the **Run** section.
@@ -61,7 +61,7 @@ Follow this process for every GitHub issue:
 
 8a. **Gate on manual testing** — STOP after opening the PR. Tell the user:
    - The branch is built, tests pass, and the PR is open.
-   - Invite them to run `make run` and test manually.
+   - Invite them to run `make -C gnucobol run` and test manually.
    - Ask explicitly: **"Ready to merge, or would you like to skip manual testing and merge now?"**
    - Do NOT proceed to merge until the user gives the go-ahead. Wait for their response.
 

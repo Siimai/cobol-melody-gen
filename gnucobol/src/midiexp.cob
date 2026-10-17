@@ -33,8 +33,8 @@
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
            SELECT MIDI-FILE
-               ASSIGN TO DYNAMIC WS-MIDI-FNAME        *> GnuCOBOL-only
-               ORGANIZATION IS BINARY SEQUENTIAL      *> GnuCOBOL-only
+               ASSIGN TO 'MIDIOUT'
+               ORGANIZATION IS SEQUENTIAL
                FILE STATUS IS WS-FS.
 
        DATA DIVISION.
@@ -44,6 +44,10 @@
        01  MIDI-BYTE          PIC X.
 
        WORKING-STORAGE SECTION.
+       01  WS-PUTENV.
+           05  FILLER             PIC X(11) VALUE 'DD_MIDIOUT='.
+           05  WS-PUTENV-VAL      PIC X(80)  VALUE SPACES.
+           05  FILLER             PIC X      VALUE LOW-VALUE.
        01  WS-MIDI-FNAME      PIC X(80)  VALUE SPACES.
        01  WS-FS              PIC XX     VALUE SPACES.
        01  WS-CURR-DT         PIC X(21)  VALUE SPACES.
@@ -111,12 +115,13 @@
            PERFORM 100-BUILD-FILENAME
            PERFORM 200-COMPUTE-TRACK-LEN
 
+           PERFORM 880-SET-FILENAME
            OPEN OUTPUT MIDI-FILE
            IF WS-FS NOT = '00'
                STRING 'ERROR: cannot open ' WS-MIDI-FNAME
                    DELIMITED SIZE INTO LS-STATUS-MSG
                MOVE 1 TO LS-RETURN-CODE
-               GOBACK
+               EXIT PROGRAM
            END-IF
 
            PERFORM 300-WRITE-HEADER
@@ -135,7 +140,7 @@
                    DELIMITED SIZE INTO LS-STATUS-MSG
            END-IF
 
-           GOBACK.
+           EXIT PROGRAM.
 
       *> ============================================================
       *> 100-BUILD-FILENAME
@@ -354,5 +359,17 @@
                    DELIMITED SIZE INTO LS-STATUS-MSG
                MOVE 1 TO LS-RETURN-CODE
            END-IF.
+
+      *> ============================================================
+      *> 880-SET-FILENAME
+      *> COBOL-85 has no run-time ASSIGN, so the SELECT uses a fixed
+      *> external name; map it to the real path through the
+      *> environment (GnuCOBOL filename-mapping reads DD_<name>).
+      *> ============================================================
+       880-SET-FILENAME.
+           MOVE LOW-VALUES TO WS-PUTENV-VAL
+           STRING WS-MIDI-FNAME DELIMITED BY SPACE
+               INTO WS-PUTENV-VAL
+           CALL 'putenv' USING WS-PUTENV.
 
        END PROGRAM midiexp.
