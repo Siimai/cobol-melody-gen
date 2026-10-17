@@ -13,6 +13,8 @@ This project targets **COBOL-85 plus the 1989 amendment (Intrinsic Function Amen
 
 A Hercules emulator running TK4- (MVS 3.8j) listens on `localhost:3270`. `s3270` is installed for scripted access, e.g. `s3270` with `Connect(localhost:3270)`.
 
+**Host address from the dev container:** the emulator runs on the Docker host, so inside the container `localhost` does not reach it. Use the Docker bridge gateway `172.17.0.1` instead (`Connect(172.17.0.1:3270)`; card reader `172.17.0.1:3505`; web console `http://172.17.0.1:8038`). `host.docker.internal` does not resolve here. Check with `(echo > /dev/tcp/172.17.0.1/3270) && echo open`. On the host itself, `localhost` is correct. The submit scripts (`mfsubmit.sh`, `submit.sh`) read the card reader host from `MFHOST` (default `localhost`), so run them as `MFHOST=172.17.0.1 mainframe/mfsubmit.sh ...` in the container. The container deliberately has no access to the host's `prt` files (it should work like a real mainframe user, over the network only), so those scripts can send a job but cannot show its output from the container. Read job output through a TSO session over `s3270` instead. The host-side files under `~/opt/tk4-_v1.00_current/` (including `prt/prt00e.txt`) are not visible from the container.
+
 Default TK4- TSO accounts (local emulator only, not real credentials):
 
 | User    | Password | Notes                  |
@@ -77,3 +79,26 @@ Everything for the mainframe lives under `mainframe/` and is separate from the G
 - Input fields keep their old value when redrawn, so a shorter number typed over a longer one leaves remnants. Test with `EraseEOF` before typing, as a user would.
 - MVS cannot hand a binary file to the host. Write binary data (for example MIDI) as hex text between marker records and convert it on the host (`mainframe/midi-from-mvs.sh`, `xxd -r -p`). Check the result against an independent encoder, not just the structure.
 - Test every screen over `s3270`: read the screen after each key (`Ascii`), type with `String`/`Tab`/`Enter`/`PF(n)`, and always log off.
+
+**Scripting TSO over `s3270` (lessons from the shared-library work)**
+- The logon screen is VTAM, not TSO: press Enter, then send `L HERC02` (not just the userid), then the password at `ENTER CURRENT PASSWORD`. Do not use `Wait(InputField)`: it blocks forever and hangs the script.
+- Never type blind. Read the screen before each step and branch on it. The prompts that break scripts are `***` paging, `ENTER NEW MEMBER OR HIT CARRIER RETURN TO REUSE MEMBER-` and the `EDIT`/`INPUT` modes. Do not run `HELP`: it opens a full-screen panel that swallows later commands, including `LOGOFF`.
+- The cleanup must check the last screen line: `READY` then `LOGOFF`; `EDIT` then `END NOSAVE`; `INPUT` then a blank Enter. Typing `LOGOFF` into an editor leaves the userid "IN USE". Never run `pkill -f` on a script name from the same shell (it kills your own command).
+- Do not log on as a user the human is using (HERC03 here). A killed or hung script leaves its userid "IN USE" until the human cancels it from the web console (`/C U=<userid>`), so use one session per script and keep scripts short.
+- To read a long member, `LIST 'dsn(member)' NONUM` and press Enter at each `***`. Dedupe lines per screen. A second listing in the same session also picks up leftover lines from the first, so list one dataset per session before comparing. Compare as sets of (sequence number, text).
+
+**Editing members in line mode (`EDIT`)**
+- For an unnumbered edit (`DATA NONUM`), `INPUT` always appends at the end of the data, whatever `FIND` did before. Edit with `CNTL OLD` instead: lines are numbered (100, 200, ...). Insert with `INPUT 1850 10`, type the line, then a blank Enter. `DELETE n` removes a line.
+- Saving over an existing PDS member prompts for the member name. Answer with Enter to reuse the member.
+- Work on a scratch copy: `EDIT 'orig' CNTL OLD`, `SAVE 'scratch'`, `END NOSAVE`, then edit the scratch dataset, check it and copy it over the live member. Always keep `.BAK` copies of the originals. Do not trust a check that only matches the lines you typed. Compare the whole member with the backup.
+
+**RAKF (users and profiles)**
+- The tables are `SYS1.SECURE.CNTL(USERS)` and `(PROFILES)` and only HERC01 (group `RAKFADM`) can update them. They only take effect after the console commands `/S RAKFUSER` and `/S RAKFPROF`, which only the human can send from the web console. Read the console reply: `USER TABLE UPDATED` / `RAKF PROFILES UPDATED` is success. A failed `RAKFUSER` leaves the old user table in place.
+- `USERS` must be sorted by user ID and then by group, or `RAKFUSER` abends with `INPUT DATA INVALID OR OUT OF SEQ`. For a user with two groups, `MELODY` goes before `USER`. Fixed columns: user 1-8, group 10-17, password 19-26, oper flag 28. An 8-character password therefore takes one space before the flag.
+- `PROFILES` columns: class 1-8, profile 9-52, id 53-60, access from 61. The entries are sorted too (`MELODY.*` goes between `IPCS` and `RPF`). A specific profile replaces the `DATASET *` default, so repeat the `ADMIN ALTER` line, otherwise the administrators lose their access.
+- `DATASET MELODY.*` also covers three-level names such as `MELODY.SOURCE.COBOL` (tested). Replacing members of a PDS needs UPDATE, creating a dataset needs ALTER.
+- The shared MELODY libraries are `MELODY.SOURCE.COBOL(MELODY68)` and `MELODY.SOURCE.ASM(MELSCR)`, created by `jcl/install-source.jcl` (generated by `gen-source-jcl.sh`). The group `MELODY` has UPDATE, `ADMIN` has ALTER and everyone else can read. The owner user's password is kept out of git in `mainframe/.secrets/`.
+
+**Working with the permission checks**
+- Logging on to accounts with RAKF access, editing the security tables and submitting jobs with a password are blocked in auto mode. Give a clear step list and ask for the manual permission mode (or `!` commands) before the first such step.
+- `mfsubmit.sh` stops in the container because it cannot read `prt00e.txt`. Send jobs with `sed ... | nc -q1 172.17.0.1 3505` and check the result over TSO (`LISTDS ... MEMBERS`).

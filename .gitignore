@@ -10,3 +10,6 @@ plans/
 
 # macOS
 .DS_Store
+
+# Local secrets (never commit)
+mainframe/.secrets/
