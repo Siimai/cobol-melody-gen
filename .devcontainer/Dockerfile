@@ -2,15 +2,13 @@ FROM ubuntu:26.04
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates curl git openssh-client less ripgrep jq \
-      python3 python3-pip nodejs npm csound sox supercollider ffmpeg \
+      python3 nodejs npm csound ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Media tooling and fonts (separate layer so the layer above stays cached)
+# Fonts for the terminal demo videos: a monospace one for the 3270 look and
+# a sans-serif one for titles (separate layer so the layer above stays cached)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      imagemagick tesseract-ocr librsvg2-bin libcairo2 fontconfig \
-      fonts-inter fonts-roboto fonts-noto-core fonts-noto-color-emoji \
-      fonts-firacode fonts-liberation2 fonts-dejavu-core fonts-open-sans \
-      fonts-lato fonts-montserrat fonts-ibm-plex \
+      fontconfig fonts-firacode fonts-dejavu-core fonts-inter \
     && fc-cache -f \
     && rm -rf /var/lib/apt/lists/*
 
@@ -20,10 +18,6 @@ RUN npm install -g playwright \
     && playwright install --with-deps chromium \
     && chmod -R a+rX /opt/playwright-browsers \
     && rm -rf /var/lib/apt/lists/*
-
-# Python libraries for media work (PEP 668: system pip needs the override flag)
-RUN pip3 install --no-cache-dir --break-system-packages \
-      pillow numpy librosa moviepy cairosvg pytesseract
 
 # Remotion + GSAP (global; NODE_PATH lets scripts outside a project resolve them)
 ENV NODE_PATH=/usr/local/lib/node_modules

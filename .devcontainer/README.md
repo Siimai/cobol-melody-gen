@@ -5,9 +5,9 @@
 > submodule instructions below describe that original, separate repo.
 
 A reusable [Dev Container](https://containers.dev/) base for working with Claude
-Code: Ubuntu 26.04 with git, Node, Python, audio/video tooling (ffmpeg, csound,
-sox, SuperCollider), image/font tooling, Playwright + Chromium, Remotion, and
-the GitHub CLI (`gh`), and the Claude Code CLI itself. Claude's config
+Code: Ubuntu 26.04 with git, Node, Python, audio/video tooling (ffmpeg,
+csound), a few fonts, Playwright + Chromium, Remotion, GnuCOBOL, `s3270`, the
+GitHub CLI (`gh`), and the Claude Code CLI itself. Claude's config
 (`claude-config`) and the `gh` login (`gh-config`, mounted at `~/.config/gh`)
 live on named Docker volumes so they survive container rebuilds. After the
 first rebuild run `gh auth login` once.
