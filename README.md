@@ -59,6 +59,7 @@ cobol/
     ├── melody/source/        mirrors the mainframe datasets
     ├── upload.sh             upload (and optionally build) from the host
     ├── tso-list.py           read a data set over a TSO session (s3270)
+    ├── demo/                 record the panel over s3270 and render a demo video
     └── midi-from-mvs.sh      turn the panel's MIDI export into a .mid file
 ```
 
