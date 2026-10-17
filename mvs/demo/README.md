@@ -1,8 +1,8 @@
 # Demo video of the mainframe panel
 
 `make-demo.sh` drives the real `MELPANEL` over `s3270`, stores every screen
-as text and renders a ~55 second 1080p video from them, ending with the
-generated melody played back. Nothing is mocked:
+as text and renders a ~42 second 1080p video from them, with a backing track from the
+first second and the generated melody played back over the run screen. Nothing is mocked:
 the video shows what the emulator returned.
 
 ```sh
@@ -23,15 +23,28 @@ Other modes: `--render-only` (reuse `build/frames.json`) and
 | File | Role |
 |------|------|
 | `record.py` | logs on, runs the panel (scale 3, 12 notes, tempo 100), PF5/PF7/PF6, always logs off; writes `build/frames.json` |
-| `melody.py` | reads the melody from the `run1` screen and writes `build/melody.json` (note timeline) and `build/melody.wav` (stdlib synth; pitch and length follow the panel's MIDI export) |
-| `index.html` | draws a frame for any time `t` (terminal, typing animation, captions, title cards, note highlight while the melody plays) |
-| `render.js` | Playwright: screenshots `index.html` at 30 fps into `build/png/` |
-| `make-demo.sh` | runs record, melody, render, and encodes `build/melody68-demo.mp4` (video plus the melody, delayed to its segment) with ffmpeg |
+| `melody.py` | reads the melody (notes, tempo, scale) from the `run1` screen into `build/melody.json`; pitch and length follow the panel's MIDI export |
+| `mix.py` | builds `build/soundtrack.wav` (stdlib synth): drums, bass and chords from 0:00, the melody on a bar line, fade-out |
+| `index.html` | draws a frame for any time `t` (terminal, typing animation, captions, title cards, note highlight and PLAYBACK badge while the melody sounds); also decides when the melody starts |
+| `render.js` | Playwright: screenshots `index.html` at 30 fps into `build/png/` and writes `build/timeline.json` (melody start, length) |
+| `make-demo.sh` | runs record, melody, render, mix and encodes `build/melody68-demo.mp4` (video plus soundtrack) with ffmpeg |
 
 `build/` is git-ignored.
 
-The audio is the melody the program generated, synthesised on the host: the
-mainframe app itself does not play sound (see *What's not in v1*).
+## How the sound stays in sync
+
+One clock: `index.html` puts the melody on the first bar line (tempo from the
+panel, bars counted from 0:00) at least 0.8 s after the run screen appears,
+and writes that time to `timeline.json`; `mix.py` reads it, so the picture,
+the highlighted notes, the drums and the melody cannot drift apart. The chords
+follow the scale the program used; under the melody each bar's chord is chosen
+from the scale's triads to fit the notes. The backing track fades out over the
+last 4.5 s while the melody's last notes ring.
+
+The audio is a playback made on the host from the program's output: the
+mainframe app itself does not play sound (see *What's not in v1*). The video
+says so (a PLAYBACK badge while the melody sounds, and a footnote on the title
+and end cards).
 
 ## No secrets in the video
 
@@ -46,5 +59,5 @@ the console (`/C U=<userid>`). The script tells you when that happens.
 
 ## Needs
 
-`s3270`, `python3`, `node` with `playwright` and its Chromium, `ffmpeg`, `jq`, and
+`s3270`, `python3`, `node` with `playwright` and its Chromium, `ffmpeg`, and
 the Fira Code and Inter fonts (all in the dev container).

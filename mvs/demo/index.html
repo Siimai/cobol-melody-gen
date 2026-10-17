@@ -56,6 +56,14 @@
   .d { color: var(--dim); text-shadow: none; }
   .f { background: var(--field-bg); color: var(--bright); }
   .hl { background: var(--accent); color: #04120a; text-shadow: none; }
+  #badge {
+    position: absolute; right: 26px; top: 70px; padding: 8px 18px; border-radius: 999px;
+    font-size: 19px; letter-spacing: .08em; font-weight: 600; opacity: 0;
+    color: #1b1300; background: var(--amber); box-shadow: 0 0 26px rgba(255,207,107,.35);
+  }
+  #badge span { font-weight: 500; letter-spacing: .02em; opacity: .8; }
+  .fn { position: absolute; left: 0; right: 0; bottom: 56px; text-align: center;
+        color: var(--cap-sub); opacity: .75; font-size: 22px; letter-spacing: .02em; }
   .cur { background: var(--text); color: #04120a; text-shadow: none; }
   #scan {
     position: absolute; inset: 52px 0 0 0; pointer-events: none;
@@ -92,18 +100,21 @@
     </div>
     <div id="term"></div>
     <div id="scan"></div>
+    <div id="badge">♪ PLAYBACK <span>· audio added in post</span></div>
   </div>
   <div id="cap" style="opacity:0"><div class="h"></div><div class="s"></div></div>
   <div class="card" id="intro" style="opacity:0">
     <div class="k">COBOL-68 &nbsp;on&nbsp; MVS 3.8j</div>
     <div class="t">MELODY68</div>
     <div class="u">A melody generator for a <b>1970s mainframe</b></div>
+    <div class="fn">The soundtrack is playback added in post-production. MELODY68 itself does not play sound.</div>
   </div>
   <div class="card" id="outro" style="opacity:0">
     <div class="k">Generate · Save · Export</div>
     <div class="t">MELODY68</div>
     <div class="u">COBOL-68 engine &nbsp;·&nbsp; assembler 3270 panel<br>running on Hercules / TK4-</div>
     <div class="tags"><span class="tag">COBOL-68</span><span class="tag">MVS 3.8j</span><span class="tag">TSO</span><span class="tag">MIDI</span></div>
+    <div class="fn">The soundtrack is playback added in post-production. MELODY68 itself does not play sound.</div>
   </div>
 </div>
 <script>
@@ -120,21 +131,26 @@ const T = [
   {f:'melpanel-typed', d:2.3, type:1, tt:1.2, h:'…start the full-screen panel', s:'MELPANEL'},
   {f:'panel',       d:3.4, h:'A 3270 panel written in assembler', s:'COBOL-68 is the engine behind it'},
   {f:'filled',      d:3.0, type:1, tt:1.7, h:'Pick a scale, note count and tempo', s:''},
-  {f:'run1',        d:4.2, h:'ENTER runs the COBOL-68 program', s:''},
-  {f:'save',        d:2.5, h:'PF5 saves the melody'},
-  {f:'midi',        d:2.7, h:'PF7 exports a standard MIDI file', s:''},
+  {f:'run1',        d:5.2, melody:1, h:'ENTER runs the COBOL-68 program', s:''},
+  {f:'save',        d:2.6, h:'PF5 saves the melody'},
+  {f:'midi',        d:3.4, h:'PF7 exports a standard MIDI file', s:''},
   {f:'list',        d:3.2, h:'PF6 lists the saved melodies'},
-  {f:'run1',        d:10,  play:1, h:'Now listen', s:'the generated melody, played back'},
 ];
-const INTRO = 3.2, OUTRO = 3.6, FADE = 0.6;
-const LEAD = 0.7;            // seconds of the play segment before the first note
-let M = null, starts = [], tTerm = 0, TOTAL = 0, audioStart = 0;
+const INTRO = 3.2, OUTRO = 4.4, FADE = 0.6;
+const MIN_LEAD = 0.8;        // earliest the melody may start after its screen appears
+let M = null, starts = [], tTerm = 0, TOTAL = 0, melodyStart = 0;
+/* The backing track has a bar line every barLen seconds from t=0 (bpm from the
+   panel). The melody starts on the first bar line after its screen appears, so
+   picture, melody and backing share one clock. */
 function layout(){
-  const p = T.find(x=>x.play);
-  p.d = LEAD + M.length + 1.4;                 // the ring-out fades under the outro
-  starts = []; let a = INTRO; T.forEach(x => { starts.push(a); a += x.d; }); tTerm = a;
-  TOTAL = tTerm + OUTRO;
-  audioStart = starts[T.indexOf(p)] + LEAD;
+  const barLen = 240 / M.bpm;
+  starts = []; let a = INTRO;
+  T.forEach(x => {
+    starts.push(a);
+    if(x.melody) melodyStart = Math.ceil((a + MIN_LEAD) / barLen - 1e-9) * barLen;
+    a += x.d;
+  });
+  tTerm = a; TOTAL = tTerm + OUTRO;
 }
 
 function pad(r){ return (r||'').padEnd(COLS,' ').slice(0,COLS); }
@@ -220,10 +236,9 @@ function render(t){
     let {fr, rows, cur} = screenAt(idx, tin);
     const blink = (Math.floor(t/0.53)%2===0) || (T[i].type && tin < T[i].tt);
     let hl = null;
-    if(T[i].play){
-      const tm = tin - LEAD;
+    if(/NOTES:\s*\d+/.test(fr.rows[14]||'') && t >= melodyStart){
+      const tm = t - melodyStart;
       hl = M.notes.find(n => tm >= n.start && tm < n.start + n.dur) || null;
-      cur = null;
     }
     term.innerHTML = draw(fr, rows, cur, blink, hl);
     // caption
@@ -234,9 +249,12 @@ function render(t){
     cap.children[0].innerHTML = seg.h || '';
     cap.children[1].innerHTML = seg.s || '';
   } else cap.style.opacity = 0;
+  // playback badge: while the melody sounds
+  const bd = document.getElementById('badge');
+  bd.style.opacity = clamp((t-(melodyStart-0.2))/0.4,0,1) * (1 - clamp((t-(melodyStart+M.length+0.4))/0.5,0,1));
   // outro
   const o = t - tTerm;
-  outro.style.opacity = o > 0 ? ease(clamp(o/0.7,0,1)) * (1 - clamp((t-(TOTAL-0.5))/0.5,0,1)) : 0;
+  outro.style.opacity = o > 0.25 ? ease(clamp((o-0.25)/0.7,0,1)) * (1 - clamp((t-(TOTAL-0.5))/0.5,0,1)) : 0;
 }
 window.TOTAL = () => TOTAL;
 /* captions that quote the recording: read them from the captured screens */
@@ -253,7 +271,7 @@ function fillCaptions(user){
   const b = /(\d+) BYTES/.exec((get('midi').rows[21]||''));
   if(b) seg('midi').s = b[1] + ' bytes, ready for any DAW';
 }
-window.timeline = () => ({audioStart, total: TOTAL});
+window.timeline = () => ({melodyStart, total: TOTAL, bpm: M.bpm});
 window.ready = Promise.all([fetch('build/frames.json').then(r=>r.json()), fetch('build/melody.json').then(r=>r.json())])
   .then(([j, m]) => { F = j.frames; M = m; layout(); fillCaptions(j.user); render(0); return true; });
 window.render = render;

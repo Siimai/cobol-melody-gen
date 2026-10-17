@@ -8,7 +8,7 @@
 # MFUSER must be given in the environment on purpose: mvs/.secrets/env would
 # default to the human's own user. MFPASS and MFHOST may also come from
 # mvs/.secrets/env. Needs s3270, python3, node with playwright (NODE_PATH),
-# ffmpeg, jq, and the Fira Code and Inter fonts (the dev container has them).
+# ffmpeg, and the Fira Code and Inter fonts (the dev container has them).
 set -e
 cd "$(dirname "$0")"
 MODE=all
@@ -30,10 +30,9 @@ if [ $MODE = preview ]; then
 fi
 rm -rf build/png
 node render.js
-DELAY=$(jq -r '(.audioStart * 1000 | floor)' build/timeline.json)
-ffmpeg -y -loglevel error -framerate 30 -i build/png/f%05d.png -i build/melody.wav \
-  -filter_complex "[1:a]adelay=${DELAY}:all=1,apad,aformat=channel_layouts=stereo[a]" \
-  -map 0:v -map "[a]" -shortest \
+python3 -I mix.py
+ffmpeg -y -loglevel error -framerate 30 -i build/png/f%05d.png -i build/soundtrack.wav \
+  -map 0:v -map 1:a -ac 2 \
   -c:v libx264 -preset slow -crf 17 -pix_fmt yuv420p -c:a aac -b:a 192k \
   -movflags +faststart build/melody68-demo.mp4
 echo "wrote $(pwd)/build/melody68-demo.mp4"
