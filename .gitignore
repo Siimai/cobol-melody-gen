@@ -16,3 +16,6 @@ mvs/.secrets/
 
 # Local tool config
 zapp.yaml
+
+# Local Claude Code settings
+.claude/settings.local.json
