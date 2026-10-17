@@ -5,6 +5,10 @@ applyTo: ["**/*.cob", "**/*.cpy"]
 
 # IBM Enterprise COBOL Guidelines
 
+## Scope
+
+These rules are for the GnuCOBOL version: `gnucobol/src/*.cob` and `*.cpy`. They do **not** apply to the MVS 3.8j version in `mvs/` (`mvs/melody/source/cobol/melody68.cbl`). That program must be **COBOL-68** because the TK4- compiler (IKFCBL00, COBOL F) accepts nothing newer: no `END-xxx` scope terminators, no `EVALUATE`, no inline `PERFORM`, no intrinsic functions, no `STRING`/`INSPECT`, no reference modification. See `CLAUDE.md` ("COBOL on the mainframe is COBOL-68").
+
 ## Compatibility Target
 
 Write all COBOL code to be compatible with **IBM Enterprise COBOL for z/OS** (version 5.x and later). Avoid GnuCOBOL-specific extensions unless there is no IBM equivalent.

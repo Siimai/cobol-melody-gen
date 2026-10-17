@@ -215,6 +215,26 @@ name is the member (upper case, extension ignored):
 The compiled programs go to `MELODY.LOAD`. Nothing is stored in the repo
 for it, and no source is copied inside any JCL.
 
+### Language: the mainframe program is COBOL-68
+
+TK4- ships the IBM OS compiler IKFCBL00 ("COBOL F"), which implements the
+1968 ANS COBOL standard. `mvs/melody/source/cobol/melody68.cbl` therefore
+has to stay COBOL-68, unlike the GnuCOBOL version (COBOL-85 plus the 1989
+amendment). The main restrictions:
+
+- fixed format, upper case, columns 8-72, period-terminated sentences
+- no `END-IF`/`END-PERFORM` terminators, no `EVALUATE`, no inline `PERFORM`
+  (use `PERFORM paragraph` and nested `IF ... ELSE`)
+- no intrinsic functions: the time comes from the `TIME-OF-DAY` register and
+  the random numbers from a hand-written generator
+- no `STRING`, `INSPECT` or reference modification; `77` items before `01`
+  items; a `VALUE` literal may not be longer than its `PIC`
+
+GnuCOBOL cannot check these rules. A compile error shows up only in the
+printed output of the `SETUP` job (the host's `prt00e.txt`), and the symptom
+from a container is that `MELODY68` is missing or stale in `MELODY.LOAD`.
+The full list is in `CLAUDE.md`.
+
 ### Prerequisites
 
 - A running TK4- Hercules (3270 on port 3270, card reader on port 3505) and

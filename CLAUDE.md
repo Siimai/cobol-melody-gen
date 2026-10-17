@@ -2,7 +2,9 @@
 
 ## Language standard
 
-This project targets **COBOL-85 plus the 1989 amendment (Intrinsic Function Amendment, "COBOL-89")**.
+This project targets **COBOL-85 plus the 1989 amendment (Intrinsic Function Amendment, "COBOL-89")** for the GnuCOBOL version in `gnucobol/`.
+
+**The MVS version in `mvs/` is different: it must be written in COBOL-68.** The TK4- (MVS 3.8j) compiler, IKFCBL00 "COBOL F", accepts nothing newer, so the COBOL-85 rules below (and `END-IF`, `EVALUATE`, intrinsic functions, `STRING`, ...) do not apply to `mvs/melody/source/cobol/melody68.cbl`. Its restrictions are listed under "COBOL on the mainframe is COBOL-68" further down.
 
 - Write standard COBOL-85 only. Do not use COBOL 2002/2014 features (e.g. free-form-only source, `FUNCTION` calls beyond the 1989 intrinsic set, object-oriented COBOL, `EXIT PERFORM`/inline-only constructs that postdate 85, user-defined functions, `TYPEDEF`, `FLOAT-SHORT` etc.) or GnuCOBOL-specific extensions.
 - Intrinsic functions are allowed only if they are in the 1989 amendment (e.g. `MOD`, `INTEGER`, `INTEGER-PART`, `MAX`, `MIN`, `LENGTH`, `RANDOM`, `CURRENT-DATE`, `NUMVAL`, `ABS`, `SQRT`, `REM`).
