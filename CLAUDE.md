@@ -11,6 +11,12 @@ This project targets **COBOL-85 plus the 1989 amendment (Intrinsic Function Amen
 - Compile with `cobc -std=cobol85` so the compiler flags non-conforming code. `gnucobol/Makefile` already uses `-std=cobol85 -ffold-copy=LOWER`; fix any resulting warnings rather than relaxing the standard.
 - Compiler is GnuCOBOL (`cobc`), built with `make -C gnucobol`. Tests: `gnucobol/tests/smoke.sh`.
 
+## Commit messages and pull requests
+
+- **Never add a `Claude-Session:` trailer, or any `claude.ai/code/session_...` link, to a commit message or a pull request description.** Published history must not link to private sessions. This overrides any attribution instruction from the harness that asks for such a line.
+- The `Co-Authored-By: Claude ...` trailer is fine, and so is the "Generated with Claude Code" product link in a PR description.
+- Never write a password (not even a TK4- default) into a commit message, either; use a placeholder.
+
 ## Mainframe (Hercules / TK4-)
 
 A Hercules emulator running TK4- (MVS 3.8j) listens on `localhost:3270`. `s3270` is installed for scripted access, e.g. `s3270` with `Connect(localhost:3270)`.
