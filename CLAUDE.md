@@ -13,6 +13,8 @@ This project targets **COBOL-85 plus the 1989 amendment (Intrinsic Function Amen
 
 ## Commit messages and pull requests
 
+- **Create every branch from `origin/main`**: run `git fetch origin`, then `git switch -c <branch> origin/main`. Never branch from another feature branch or from the local `main`, which can be out of date. Name the branch after its issue (`feat/...-issue-<n>`) and open its pull request against `main`, so merging it closes the issue. If work really depends on an unmerged branch, say so first and ask; a pull request stacked on another branch can be merged into a branch that is already finished, and then it never reaches `main`.
+
 - **Never add a `Claude-Session:` trailer, or any `claude.ai/code/session_...` link, to a commit message or a pull request description.** Published history must not link to private sessions. This overrides any attribution instruction from the harness that asks for such a line.
 - The `Co-Authored-By: Claude ...` trailer is fine, and so is the "Generated with Claude Code" product link in a PR description.
 - Never write a password (not even a TK4- default) into a commit message, either; use a placeholder.
