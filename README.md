@@ -211,6 +211,7 @@ name is the member (upper case, extension ignored):
 | `cobol/melody68.cbl` | `MELODY.SOURCE.COBOL(MELODY68)` | the COBOL-68 program |
 | `cobol/melval.cbl` | `MELODY.SOURCE.COBOL(MELVAL)` | COBOL-68 input validation called by the panel |
 | `cobol/melsav.cbl` | `MELODY.SOURCE.COBOL(MELSAV)` | COBOL-68 saved-melody records (build, list row, open) called by the panel |
+| `cobol/melmid.cbl` | `MELODY.SOURCE.COBOL(MELMID)` | COBOL-68 Standard MIDI File builder (hex text) called by the panel |
 | `asm/melscr.asm` | `MELODY.SOURCE.ASM(MELSCR)` | the 3270 panel |
 | `clist/melody.clist`, `melpanel.clist`, `melsetup.clist`, `melbuild.clist` | `MELODY.SOURCE.CLIST(...)` | menu, panel starter, first-run setup, build command |
 | `cntl/setup.jcl`, `melscr.jcl`, `cmdproc.jcl` | `MELODY.SOURCE.CNTL(...)` | build jobs (they read the source from the libraries) |

@@ -62,10 +62,6 @@ Frequently used instruction forms:
 | `COLP` | `DS F` | Current screen column in the melody display loop. |
 | `POLLC` | `DS F` | Remaining one-second result-poll attempts. |
 | `SAVCNT` | `DS F` | Number of saved-melody records counted before appending. |
-| `NCNT` | `DS F` | Number of notes to export to MIDI. |
-| `BPM` | `DS F` | Tempo in beats per minute during MIDI conversion. |
-| `PCH` | `DS F` | Temporarily preserves a MIDI pitch across helper calls. |
-| `MLEN` | `DS F` | Number of MIDI bytes generated. |
 | `NSAV` | `DS F` | Number of saved records currently held in `SAVEDT`. |
 | `LNK1` | `DS F` | Saves `R10` when a paragraph makes nested calls using `R10`. |
 | `EODRET` | `DS A` | Address of the current end-of-data continuation routine. |
@@ -82,6 +78,7 @@ Frequently used instruction forms:
 | `TMV` | `DS CL3` | Three-character tempo input. |
 | `LDV` | `DS CL3` | Three-character saved-melody number input. |
 | `SFUNC`..`SRES2` | `DS` block | `MELSAV` parameter area (`SAV-AREA`): function, return code, ID, scale, tempo, length, notes, record, list row and two result lines. |
+| `NMTM`..`NMHEX` | `DS` block | `MELMID` parameter area (`MID-AREA`): tempo, note count, notes, file size, line count and the hex text. |
 | `TM3` | `DS CL3` | Validated tempo formatted as three digits for SYSIN. |
 | `NN` | `DS CL2` | Validated note count formatted as two digits. |
 | `SC1` | `DS CL1` | Validated scale formatted as one digit. |
@@ -94,7 +91,6 @@ Frequently used instruction forms:
 | `RESN` | `DS CL72` | Up to 18 four-character note descriptions. |
 | `REC` | `DS CL80` | Work record for fixed 80-byte sequential files and generated JCL. |
 | `SAVEDT` | `DS CL800` | Space for ten 80-byte saved-melody records. |
-| `MBUF` | `DS XL200` | Binary buffer for the generated Standard MIDI File. |
 | `REV` | `DS XL256` | Reverse 3270 address translation table indexed by encoded byte. |
 | `INBUF` | `DS XL256` | Buffer for the `TGET` attention byte and modified-field input. |
 | `BUF` | `DS XL1400` | Outgoing 3270 screen data stream. |
@@ -418,65 +414,20 @@ Saved-melody rules live in the COBOL-68 subprogram `MELSAV` ([`melsav.cbl`](../m
 - `MVI HAVRES,C'Y'` marks a result available; `MVI VIEW,C'M'` switches to the main panel; `MVC MSG,MSGLD` loads the loaded-message template; `MVC MSG+8(3),SNUM` inserts the saved ID.
 - `LDEND L 10,LNK1` restores the caller link; `BR 10` returns.
 
-## MIDI generation helpers
+## MIDI export: `MIDIEXP` and `MELMID`
 
-### `PUTB`
+The Standard MIDI File is built by the COBOL-68 subprogram `MELMID` ([`melmid.cbl`](../melody/source/cobol/melmid.cbl)). It returns the whole file as hex text, so no binary bytes are handled in assembler. `MIDIEXP` only passes the data in and writes the records.
 
-- `STC 2,0(8)` appends the low byte of `R2` at the MIDI buffer pointer in `R8`.
-- `LA 8,1(8)` advances the pointer; `BR 11` returns.
+- `INIT` does `LOAD EP=MELMID` (address in `MELMEP`); `FINISH` does `DELETE EP=MELMID`.
+- `WORK` holds `NMTM, NMCNT, NMNOTES, NMBYTES, NMLINES, NMHEX` contiguously: the 457-byte `MID-AREA` (in: tempo, note count, notes; out: file size, number of lines, hex text).
+- `CLI HAVRES,C'Y'` / `BNE MXNONE` reports when there is nothing to export; `BAL 11,CURINFO` gets the tempo and note count of the shown melody.
+- `MVC NMTM,CURTM`, `MVC NMCNT,CURLEN` and `MVC NMNOTES,RESN` fill the input; the call sets the last-parameter bit in `VPLIST`, loads `R1` and does `BALR 14,15`.
+- `OPEN (MIDO,OUTPUT)` opens `DD MIDI`; the first record is ` *MIDI-BEGIN`.
+- `PACK TMPD,NMLINES` / `CVB 7,TMPD` give the line count. `HX1` writes each 64-character slice of `NMHEX` after one blank (`MVC REC+1(64),0(8)`, `LA 8,64(8)`, `BCT 7,HX1`).
+- The last record is ` *MIDI-END`; `CLOSE (MIDO)`; `MVC MSG,MSGMX` and `MVC MSG+16(3),NMBYTES` put the byte count in the message.
+- `MXNONE MVC MSG,MSGNOM` shows the nothing-to-export message; `MXEND L 10,LNK1` / `BR 10` returns.
 
-### `PITCHF`
-
-This converts a four-character note description at `R5` into a MIDI pitch in `R2`.
-
-- `LA 3,PLET` points to note letters; `LA 4,PVAL` points to their MIDI base pitches; `LA 1,7` sets the search length.
-- `PH1 CLC 0(1,3),0(5)` compares the current note letter with the input letter; `BE PH2` stops on a match.
-- `LA 3,1(3)` and `LA 4,1(4)` advance letter and pitch pointers; `BCT 1,PH1` searches all seven letters.
-- If no letter matched, `LA 4,PVAL` falls back to C's base pitch.
-- `PH2 SR 2,2` clears the output; `IC 2,0(4)` loads the base pitch.
-- `SR 0,0` clears `R0`; `IC 0,2(5)` loads the encoded octave; `N 0,=F'15'` keeps its low nibble.
-- `SH 0,=H'4'` adjusts the encoded octave convention; `MH 0,=H'12'` converts octave to semitones; `AR 2,0` adds those semitones to the base pitch.
-- `CLI 1(5),C'#'` checks the accidental; `BNE PH3` skips non-sharps; `LA 2,1(2)` raises pitch by one for a sharp.
-- `PH3 BR 11` returns the pitch.
-
-### `MIDIEXP`
-
-- `ST 10,LNK1` saves the caller link; `CLI HAVRES,C'Y'` checks for a displayed melody; `BNE MXNONE` reports no melody if absent.
-- `BAL 11,CURINFO` obtains the melody's note count, tempo, and scale metadata.
-- `PACK TMPD,CURLEN` and `CVB 2,TMPD` convert note count to binary; `ST 2,NCNT` saves it.
-- `PACK TMPD,CURTM` and `CVB 2,TMPD` convert tempo; `LTR 2,2` / `BNZ MX0` keep a nonzero tempo; `LA 2,120` supplies the default 120 BPM otherwise; `MX0 ST 2,BPM` stores tempo.
-- `LA 8,MBUF` points to the MIDI buffer; `MVC 0(14,8),MTHD` writes the 14-byte `MThd` header; `LA 8,14(8)` advances.
-- `MVC 0(4,8),MTRK` writes the `MTrk` chunk ID; `MVC 4(3,8),=X'000000'` reserves three bytes for track length.
-- `L 2,NCNT`, `MH 2,=H'9'`, and `AH 2,=H'11'` calculate track length for each note plus fixed events; `STC 2,7(8)` stores its low byte in the chunk header.
-- `LA 8,8(8)` advances to the track events; `MVC 0(4,8),=X'00FF5103'` writes zero delta-time and the Set Tempo meta-event prefix; `LA 8,4(8)` advances past it.
-- `L 3,=F'60000000'` loads the million-microseconds-per-minute scale factor; `SR 2,2` clears the high half of the dividend; `D 2,BPM` divides the 64-bit value in `R2:R3` by tempo. The quotient is returned in `R2` and the remainder in `R3`.
-- As written, `LR 2,3`, `SRL 2,16`, and `BAL 11,PUTB` copy and append the remainder in `R3` as the first tempo byte. The following `LR 2,3`, `SRL 2,8`, and `BAL` again copy that same remainder for the second byte; the final `LR 2,3` and `BAL` append it a third time. These instructions do not use the quotient in `R2`.
-- `L 7,NCNT` sets the note loop count; `LA 5,RESN` points at note descriptions.
-- `MXN SR 2,2` emits a zero delta-time before each note-on; `LA 2,144` and `BAL 11,PUTB` emit MIDI status `0x90` (channel 1 note-on).
-- `BAL 11,PITCHF` computes the note; `ST 2,PCH` preserves pitch; `BAL 11,PUTB` writes it; `LA 2,100` and `BAL` write velocity 100.
-- `LA 3,DURT` points to the duration-letter table; `LA 4,VQT` points to matching variable-length quarter-tick values; `LA 1,4` sets the four-entry search count.
-- `DL1 CLC 0(1,3),3(5)` compares each duration code with the note's fourth character; `BE DL2` stops on a match; `LA 3,1(3)` advances duration pointer; `LA 4,2(4)` advances two bytes in the corresponding tick encoding; `BCT 1,DL1` searches all four.
-- If no duration matches, `LA 4,VQT+4` chooses the fallback duration entry.
-- `DL2 SR 2,2` clears a register; `IC 2,0(4)` loads the first encoded delta byte; `BAL 11,PUTB` appends it; the next `SR`/`IC 2,1(4)`/`BAL` appends the second.
-- `LA 2,128` and `BAL` emit status `0x80` (channel 1 note-off); `L 2,PCH` and `BAL` append the pitch; `SR 2,2` and `BAL` append zero release velocity.
-- `LA 5,4(5)` advances to the next four-character note; `BCT 7,MXN` repeats for every note.
-- `MVC 0(4,8),=X'00FF2F00'` writes the end-of-track meta-event; `LA 8,4(8)` advances past it.
-- `LA 2,MBUF`, `SR 8,2`, and `ST 8,MLEN` calculate/store the number of bytes produced.
-- `OPEN (MIDO,OUTPUT)` opens the text-form MIDI output dataset.
-- `MVC REC,BLANKS` clears a record; `MVC REC(12),=C' *MIDI-BEGIN'` writes the begin marker; `PUT MIDO,REC` writes it.
-- `LA 8,MBUF` resets the byte pointer; `L 7,MLEN` loads remaining binary length.
-- `HX1 LTR 7,7` tests remaining bytes; `BZ HXDONE` ends conversion when zero.
-- `LA 3,32` chooses a maximum of 32 bytes per text record; `CR 7,3` compares remaining bytes; `BNL HX2` uses 32 when enough remain; `LR 3,7` uses the shorter remainder otherwise.
-- `HX2 MVC REC,BLANKS` clears a line; `LA 4,REC+1` points to its hex payload, leaving a leading blank; `LR 5,3` sets bytes to encode; `SR 7,3` subtracts them from the remaining count.
-- `HX3 SR 2,2` clears the byte register; `IC 2,0(8)` loads a MIDI byte; `LR 1,2` preserves it; `SRL 1,4` extracts its high nibble; `IC 0,HEXT(1)` looks up the hex character; `STC 0,0(4)` writes it.
-- `N 2,=F'15'` extracts the low nibble; `IC 0,HEXT(2)` looks up its character; `STC 0,1(4)` writes it.
-- `LA 4,2(4)` advances two output characters; `LA 8,1(8)` advances one binary byte; `BCT 5,HX3` encodes the selected chunk.
-- `PUT MIDO,REC` writes the hex line; `B HX1` processes the next chunk.
-- `HXDONE MVC REC,BLANKS` clears the final record; `MVC REC(10),=C' *MIDI-END'` places the end marker; `PUT MIDO,REC` writes it; `CLOSE (MIDO)` closes the file.
-- `MVC MSG,MSGMX` loads the success message; `L 2,MLEN` gets byte count; `CVD 2,TMPD` converts it to display decimal; `UNPK MSG+16(3),TMPD+6(2)` inserts three digits; `OI MSG+18,X'F0'` makes the final digit printable.
-- `B MXEND` skips the no-result branch.
-- `MXNONE MVC MSG,MSGNOM` displays the no-melody message.
-- `MXEND L 10,LNK1` restores the link; `BR 10` returns.
+`MELMID` writes the file in this order: header chunk (format 0, one track, 480 ticks per quarter note); track header with the length `9 * notes + 11`; tempo event (`60000000 / BPM` microseconds, 0 or blank = 120); for each note a note-on (velocity 100), a two-byte delay (W 1920, H 960, Q 480, E 240 ticks, anything else Q) and a note-off; end of track. Pitch is C4 = 60, 12 per octave, `#` adds one. Output is limited to 16 notes (177 bytes, six hex lines).
 
 ## End-of-data and screen shutdown
 
@@ -520,14 +471,6 @@ Every label in this section defines data or assembly-time values used by the pre
 | `MSGNOL` | Invalid/missing saved-ID message. |
 | `MSGMX` | MIDI export success template, including a three-digit byte-count insertion point. |
 | `MSGNOM` | No-current-melody export message. |
-| `HEXT DC C'0123456789ABCDEF'` | Lookup table mapping values 0-15 to uppercase hexadecimal characters. |
-| `PLET DC C'CDEFGAB'` | Natural note letters in the same order as the pitch table. |
-| `PVAL DC AL1(60,62,64,65,67,69,71)` | One-byte MIDI base pitch for each letter C through B. |
-| `DURT DC C'WHQE'` | Duration symbols searched by `MIDIEXP`: whole, half, quarter, and eighth. |
-| `VQT DC X'8F00874083608170'` | Two-byte variable-length delta-time encodings corresponding to `DURT`. |
-| `MTHD DC X'4D5468640000000600000001'` | First 12 bytes of the Standard MIDI `MThd` header: chunk ID, length, format, and one track. |
-| Following `DC X'01E0'` | Two-byte division/resolution value, 480 ticks per quarter note; this completes the 14-byte header copied from `MTHD`. |
-| `MTRK DC X'4D54726B'` | ASCII `MTrk` track-chunk identifier. |
 | `MSGLD DC CL70'LOADED #nnn'` | Loaded-ID message template. |
 | `ENDMSG DC C'MELSCR ENDED'` | Text displayed after clearing the panel. |
 | `ERASE DC X'1140403C404000'` | Seven-byte 3270 stream fragment: SBA to address zero, Repeat-to-Address, screen-end address, and null fill byte. |

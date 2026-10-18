@@ -7,9 +7,9 @@
 *  PF5 saves the shown melody to DD SAVED, PF6 lists the saved ones
 *  and ENTER on that list loads one by number.  PF7 writes the shown
 *  melody as a Standard MIDI File, in hex text, to DD MIDI.
-*  The input rules (MELVAL) and the saved-melody records (MELSAV) are
-*  COBOL-68 subprograms loaded in INIT; this program does the screen
-*  and the file I/O.
+*  The input rules (MELVAL), the saved-melody records (MELSAV) and the
+*  MIDI file (MELMID) are COBOL-68 subprograms loaded in INIT; this
+*  program does the screen and the file I/O.
 *  PARM: 'm,userid'  m = S (start) or W (wait for result)
 *  Registers: 12+9 code bases, 13 work area (WORK), 6 build pointer,
 *  10/11 links.
@@ -59,15 +59,12 @@ ROWC     DS    F
 COLP     DS    F
 POLLC    DS    F
 SAVCNT   DS    F
-NCNT     DS    F
-BPM      DS    F
-PCH      DS    F
-MLEN     DS    F
 NSAV     DS    F
 LNK1     DS    F
 EODRET   DS    A
 MELVEP   DS    A
 MELSEP   DS    A
+MELMEP   DS    A
 VPLIST   DS    A
 TMPD     DS    D
 AID      DS    X
@@ -96,6 +93,12 @@ SREC     DS    CL80
 SLINE    DS    CL44
 SRES1    DS    CL80
 SRES2    DS    CL80
+NMTM     DS    CL3
+NMCNT    DS    CL2
+NMNOTES  DS    CL64
+NMBYTES  DS    CL3
+NMLINES  DS    CL1
+NMHEX    DS    CL384
 CURLEN   DS    CL2
 CURTM    DS    CL3
 UID      DS    CL8
@@ -106,7 +109,6 @@ RES2     DS    CL80
 RESN     DS    CL72
 REC      DS    CL80
 SAVEDT   DS    CL800
-MBUF     DS    XL200
 REV      DS    XL256
 INBUF    DS    XL256
 BUF      DS    XL1400
@@ -204,7 +206,8 @@ PF6      BAL   10,PARSE
          B     LOOP
 EXIT     BAL   10,ENDSCR
          MVC   RETC,=F'0'
-FINISH   DELETE EP=MELSAV
+FINISH   DELETE EP=MELMID
+         DELETE EP=MELSAV
          DELETE EP=MELVAL
          L     2,RETC
          L     3,4(13)
@@ -228,6 +231,8 @@ INIT1    SR    4,4
          ST    0,MELVEP
          LOAD  EP=MELSAV            COBOL-68 SAVED-MELODY RULES
          ST    0,MELSEP
+         LOAD  EP=MELMID            COBOL-68 MIDI FILE BUILDER
+         ST    0,MELMEP
          MVC   MSG,MSG0
          MVI   SCV,C' '
          MVC   NTV,=C'  '
@@ -698,150 +703,39 @@ LDOK     MVC   SREC,0(8)
 LDEND    L     10,LNK1
          BR    10
 *
-*  PUTB - append the byte in R2 to the MIDI buffer (R8)
-PUTB     STC   2,0(8)
-         LA    8,1(8)
-         BR    11
-*
-*  PITCHF - R5 -> note (char, accid, octave, dur); R2 = MIDI pitch
-PITCHF   LA    3,PLET
-         LA    4,PVAL
-         LA    1,7
-PH1      CLC   0(1,3),0(5)
-         BE    PH2
-         LA    3,1(3)
-         LA    4,1(4)
-         BCT   1,PH1
-         LA    4,PVAL
-PH2      SR    2,2
-         IC    2,0(4)
-         SR    0,0
-         IC    0,2(5)
-         N     0,=F'15'
-         SH    0,=H'4'
-         MH    0,=H'12'
-         AR    2,0
-         CLI   1(5),C'#'
-         BNE   PH3
-         LA    2,1(2)
-PH3      BR    11
-*
-*  MIDIEXP - build the Standard MIDI File in MBUF, write it as hex
-*  text records to DD MIDI between *MIDI-BEGIN and *MIDI-END
+*  MIDIEXP - MELMID builds the Standard MIDI File as hex text; write
+*  it to DD MIDI between *MIDI-BEGIN and *MIDI-END, 64 hex chars a line
 MIDIEXP  ST    10,LNK1
          CLI   HAVRES,C'Y'
          BNE   MXNONE
          BAL   11,CURINFO
-         PACK  TMPD,CURLEN
-         CVB   2,TMPD
-         ST    2,NCNT
-         PACK  TMPD,CURTM
-         CVB   2,TMPD
-         LTR   2,2
-         BNZ   MX0
-         LA    2,120
-MX0      ST    2,BPM
-         LA    8,MBUF
-         MVC   0(14,8),MTHD
-         LA    8,14(8)
-         MVC   0(4,8),MTRK
-         MVC   4(3,8),=X'000000'
-         L     2,NCNT
-         MH    2,=H'9'
-         AH    2,=H'11'
-         STC   2,7(8)
-         LA    8,8(8)
-         MVC   0(4,8),=X'00FF5103'
-         LA    8,4(8)
-         L     3,=F'60000000'
-         SR    2,2
-         D     2,BPM
-         LR    2,3
-         SRL   2,16
-         BAL   11,PUTB
-         LR    2,3
-         SRL   2,8
-         BAL   11,PUTB
-         LR    2,3
-         BAL   11,PUTB
-         L     7,NCNT
-         LA    5,RESN
-MXN      SR    2,2
-         BAL   11,PUTB
-         LA    2,144
-         BAL   11,PUTB
-         BAL   11,PITCHF
-         ST    2,PCH
-         BAL   11,PUTB
-         LA    2,100
-         BAL   11,PUTB
-         LA    3,DURT
-         LA    4,VQT
-         LA    1,4
-DL1      CLC   0(1,3),3(5)
-         BE    DL2
-         LA    3,1(3)
-         LA    4,2(4)
-         BCT   1,DL1
-         LA    4,VQT+4
-DL2      SR    2,2
-         IC    2,0(4)
-         BAL   11,PUTB
-         SR    2,2
-         IC    2,1(4)
-         BAL   11,PUTB
-         LA    2,128
-         BAL   11,PUTB
-         L     2,PCH
-         BAL   11,PUTB
-         SR    2,2
-         BAL   11,PUTB
-         LA    5,4(5)
-         BCT   7,MXN
-         MVC   0(4,8),=X'00FF2F00'
-         LA    8,4(8)
-         LA    2,MBUF
-         SR    8,2
-         ST    8,MLEN
+         MVC   NMTM,CURTM
+         MVC   NMCNT,CURLEN
+         MVC   NMNOTES,RESN
+         LA    1,NMTM
+         O     1,=X'80000000'       LAST (ONLY) PARAMETER
+         ST    1,VPLIST
+         LA    1,VPLIST
+         L     15,MELMEP
+         BALR  14,15
          OPEN  (MIDO,OUTPUT)
          MVC   REC,BLANKS
          MVC   REC(12),=C' *MIDI-BEGIN'
          PUT   MIDO,REC
-         LA    8,MBUF
-         L     7,MLEN
-HX1      LTR   7,7
-         BZ    HXDONE
-         LA    3,32
-         CR    7,3
-         BNL   HX2
-         LR    3,7
-HX2      MVC   REC,BLANKS
-         LA    4,REC+1
-         LR    5,3
-         SR    7,3
-HX3      SR    2,2
-         IC    2,0(8)
-         LR    1,2
-         SRL   1,4
-         IC    0,HEXT(1)
-         STC   0,0(4)
-         N     2,=F'15'
-         IC    0,HEXT(2)
-         STC   0,1(4)
-         LA    4,2(4)
-         LA    8,1(8)
-         BCT   5,HX3
+         PACK  TMPD,NMLINES
+         CVB   7,TMPD
+         LA    8,NMHEX
+HX1      MVC   REC,BLANKS
+         MVC   REC+1(64),0(8)
          PUT   MIDO,REC
-         B     HX1
-HXDONE   MVC   REC,BLANKS
+         LA    8,64(8)
+         BCT   7,HX1
+         MVC   REC,BLANKS
          MVC   REC(10),=C' *MIDI-END'
          PUT   MIDO,REC
          CLOSE (MIDO)
          MVC   MSG,MSGMX
-         L     2,MLEN
-         CVD   2,TMPD
-         UNPK  MSG+16(3),TMPD+6(2)
-         OI    MSG+18,X'F0'
+         MVC   MSG+16(3),NMBYTES
          B     MXEND
 MXNONE   MVC   MSG,MSGNOM
 MXEND    L     10,LNK1
@@ -884,14 +778,6 @@ MSGLST   DC    CL70'TYPE A NUMBER AND PRESS ENTER TO LOAD IT'
 MSGNOL   DC    CL70'NO SUCH SAVED MELODY'
 MSGMX    DC    CL70'MIDI EXPORTED - nnn BYTES - DATA SET MELODY.MIDI'
 MSGNOM   DC    CL70'NOTHING TO EXPORT - RUN A MELODY FIRST'
-HEXT     DC    C'0123456789ABCDEF'
-PLET     DC    C'CDEFGAB'
-PVAL     DC    AL1(60,62,64,65,67,69,71)
-DURT     DC    C'WHQE'
-VQT      DC    X'8F00874083608170'
-MTHD     DC    X'4D5468640000000600000001'
-         DC    X'01E0'
-MTRK     DC    X'4D54726B'
 MSGLD    DC    CL70'LOADED #nnn'
 ENDMSG   DC    C'MELSCR ENDED'
 ERASE    DC    X'1140403C404000'
