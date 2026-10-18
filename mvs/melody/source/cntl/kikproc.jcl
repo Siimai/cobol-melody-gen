@@ -1,0 +1,19 @@
+//MELPRC   JOB (1),'MELODY',CLASS=A,MSGCLASS=A
+//* Copies the two KICKS procs that the MELO build jobs use from the
+//* KICKS proc library into SYS2.PROCLIB, which is on the JES2 PROC00
+//* path, so that EXEC K2KCOBCL and EXEC KIKMAPS are found.  A job
+//* cannot add the KICKS library to the proc path itself.  Run it once
+//* as HERC02 (ALTER on SYS2.*), before MELKMAP and MELKCOB:
+//*   SUBMIT 'MELODY.SOURCE.CNTL(KIKPROC)'
+//* To undo, delete the two members from SYS2.PROCLIB.
+//C1       EXEC PGM=IEBGENER
+//SYSPRINT DD SYSOUT=A
+//SYSIN    DD DUMMY
+//SYSUT1   DD DSN=KICKS.KICKSSYS.V1R5M0.PROCLIB(K2KCOBCL),DISP=SHR
+//SYSUT2   DD DSN=SYS2.PROCLIB(K2KCOBCL),DISP=SHR
+//C2       EXEC PGM=IEBGENER
+//SYSPRINT DD SYSOUT=A
+//SYSIN    DD DUMMY
+//SYSUT1   DD DSN=KICKS.KICKSSYS.V1R5M0.PROCLIB(KIKMAPS),DISP=SHR
+//SYSUT2   DD DSN=SYS2.PROCLIB(KIKMAPS),DISP=SHR
+//

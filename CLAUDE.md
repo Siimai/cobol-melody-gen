@@ -29,6 +29,15 @@ TSO accounts on this emulator: HERC01 and HERC02 (fully authorized; only HERC01 
 
 The scripts read `MFUSER`, `MFPASS` and `MFHOST` from the environment, or from `mvs/.secrets/env` (template: `mvs/env.example`). Never write a password into a tracked file. Always send `LOGOFF` before disconnecting; otherwise the userid stays "IN USE" until cancelled from the MVS console (`/C U=<userid>`, web console at `http://localhost:8038`).
 
+### KICKS: documentation only, no reference implementations
+
+For the KICKS work (issue #24, `mvs/kicks/`), the only allowed sources are the KICKS documentation (the User's Guide in the `kicks-tso-v1r5m0` archive) and general knowledge of CICS programming.
+
+- Do not use the KICKS implementation as a reference: its source, macros, procs, CLISTs, load modules, or how the code behaves internally.
+- Do not use the example applications that ship with KICKS (the sample programs, sample maps in `MAPSRC`, sample transactions, `KSSFPGM` and the like) as a template or reference, on the mainframe or in the archive.
+- Do not use the local KICKS install notes and job decks (`mvs/kicks/`) either. That folder was moved out of the repository on purpose; if it shows up again, do not read from it. Our own code for the transaction lives in the normal tree `mvs/melody/source/` (see `mvs/docs/melody-kicks.md`).
+- Write the BMS maps, COBOL programs and table entries from the documented API and from standard CICS practice. If the documentation does not answer a question, say so and test it on the system instead of reading KICKS internals or examples.
+
 ### Mainframe layout and tooling
 
 Everything for the mainframe lives under `mvs/` and is separate from the GnuCOBOL version in `gnucobol/`.
