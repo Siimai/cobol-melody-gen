@@ -81,7 +81,7 @@ Frequently used instruction forms:
 | `NTV` | `DS CL2` | Two-character note-count input. |
 | `TMV` | `DS CL3` | Three-character tempo input. |
 | `LDV` | `DS CL3` | Three-character saved-melody number input. |
-| `NORMV` | `DS CL3` | Three-digit, zero-filled normalized numeric value. |
+| `SFUNC`..`SRES2` | `DS` block | `MELSAV` parameter area (`SAV-AREA`): function, return code, ID, scale, tempo, length, notes, record, list row and two result lines. |
 | `TM3` | `DS CL3` | Validated tempo formatted as three digits for SYSIN. |
 | `NN` | `DS CL2` | Validated note count formatted as two digits. |
 | `SC1` | `DS CL1` | Validated scale formatted as one digit. |
@@ -245,10 +245,7 @@ Each `PTXT` below writes one protected screen field at the given row and column.
 - `L 7,NSAV` loads the number of list entries; `LTR 7,7` tests for zero; `BNZ BL1` starts listing if any exist.
 - With no entries, `PTXT 5,3,...` displays the empty-list message and `B BL9` skips the row loop.
 - `BL1 MVC ROWC,=F'4'` chooses the first list row; `LA 8,SAVEDT` points at the first saved record.
-- `BL2 MVC TL,BLANKS` clears the formatted row; `MVI TL,C'#'` writes the number marker; `MVC TL+1(3),0(8)` copies the three-digit record ID.
-- `SR 2,2` clears a register; `IC 2,3(8)` loads the scale byte; `N 2,=F'15'` masks it to a nibble; `BZ BL3` skips name lookup for scale zero.
-- `BCTR 2,0`, `MH 2,=H'16'`, and `LA 3,SCNAMES(2)` turn a 1-based scale number into a byte offset in the 16-byte name table; `MVC TL+6(16),0(3)` copies the name.
-- `BL3 MVC TL+24(3),4(8)` copies the three-byte tempo; `MVC TL+27(4),=C' BPM'` adds the unit; `MVC TL+34(2),7(8)` copies the two-byte note count; `MVC TL+36(6),=C' NOTES'` adds its label.
+- `BL2 MVC SREC,0(8)` and `CALLSAV R` let `MELSAV` format one list row (`#nnn`, scale name, tempo, note count); `MVC TL,SLINE` takes the 44-byte row.
 - `L 2,ROWC`, `MH 2,=H'80'`, and `AH 2,=H'1'` calculate the screen address for the row; `BAL 11,PUTSBA` emits it.
 - The `MVI` pair starts a protected normal field; `MVC 2(44,6),TL` displays the formatted row; `LA 6,46(6)` advances the output pointer.
 - The `L`/`LA`/`ST` sequence increments `ROWC`; `LA 8,80(8)` advances to the next 80-byte record; `BCT 7,BL2` repeats for all records.
@@ -297,20 +294,6 @@ Each `PTXT` below writes one protected screen field at the given row and column.
 - `CR 5,7` and `BNLR 11` stop at the input end; `CLI 0(5),X'11'` / `BER 11` stop at the next SBA order; `CLI 0(5),X'00'` / `BER 11` stop at a null.
 - `MVC 0(1,8),0(5)` copies one typed byte; `LA 8,1(8)` advances the destination; `LA 5,1(5)` advances the input; `BCT 2,CPYFLD` repeats for the field width; `BR 11` returns.
 
-## Numeric normalization: `NORM3`
-
-`NORM3` receives a three-character field at `R5`, stores normalized digits in `NORMV`, and returns status in `R15`.
-
-- `MVC NORMV,=C'000'` starts with a zero-filled result.
-- `LA 4,3` starts with a maximum width of three.
-- The `CLI`/`BNE`/`BCTR` sequence checks trailing, middle, then leading spaces and reduces the number of significant characters. If all are blank, `SR 15,15` returns success and `BR 11` exits.
-- `NM1 LR 2,5` points `R2` at the input; `LR 7,4` sets a loop count to its significant length.
-- `NM2` compares each byte against `'0'` and `'9'`. `BL NMBAD` and `BH NMBAD` reject non-digits; `LA 2,1(2)` advances; `BCT 7,NM2` checks every significant character.
-- `LA 3,NORMV+3` points one past the normalized destination; `SR 3,4` backs up by the field width; `BCTR 4,0` converts width to an execute-form length.
-- `EX 4,MVCNM` copies the significant digits into the rightmost part of `NORMV`; `SR 15,15` sets success; `BR 11` returns.
-- `NMBAD LA 15,4` returns a nonzero invalid-number status; `BR 11` returns.
-- `MVCNM MVC 0(1,3),0(5)` is the one-byte template modified by `EX` to copy multiple bytes.
-
 ## Input validation: `VALID` and `MELVAL`
 
 Validation lives in the COBOL-68 subprogram `MELVAL` ([`melval.cbl`](../melody/source/cobol/melval.cbl)), so the rules read as COBOL. `VALID` only calls it.
@@ -321,7 +304,16 @@ Validation lives in the COBOL-68 subprogram `MELVAL` ([`melval.cbl`](../melody/s
 - `VRC` is `0` for success (`VALOK`=`Y`, `MSGSUB` shown) or `1`, `2`, `3` for a bad scale, notes or tempo (`MSGB1`, `MSGB2`, `MSGB3`).
 - Rules: scale blank or 0-8; notes blank, 0, or 8-16 (`8` and `08` both fine); tempo blank, 0, or 40-240. Blank scale/notes/tempo mean random/default.
 - `MELVAL` ends with `GOBACK`; COBOL F rejects `EXIT PROGRAM`.
-- `NORM3` stays in assembler for `LOADIT`.
+
+## Saved melodies: `MELSAV`
+
+Saved-melody rules live in the COBOL-68 subprogram `MELSAV` ([`melsav.cbl`](../melody/source/cobol/melsav.cbl)). `MELSCR` keeps the file I/O (`DD SAVED`), the 10-record window `SAVEDT` and the screen; `MELSAV` only builds and takes apart records in memory.
+
+- `INIT` does `LOAD EP=MELSAV` (address in `MELSEP`); `FINISH` does `DELETE EP=MELSAV`.
+- `WORK` holds `SFUNC, SRC, SNUM, SSC, STM, SLEN, SNOTES, SREC, SLINE, SRES1, SRES2` contiguously: the 359-byte `SAV-AREA`.
+- The `CALLSAV` macro sets `SFUNC`, builds the one-entry parameter list with the last-parameter bit, and does `BALR 14,15`. Registers 2-13 survive the call.
+- Functions: `N` normalize a typed ID (`SRC` 0 ok, 1 not numeric); `C` read scale/tempo/length from the shown result; `B` build a save record; `R` format a list row; `D` open a record into the result lines.
+- The scale names are a table in `MELSAV` only. `MELSAV` ends with `GOBACK`.
 
 ## Userid copying and JCL creation
 
@@ -387,12 +379,8 @@ Validation lives in the COBOL-68 subprogram `MELVAL` ([`melval.cbl`](../melody/s
 
 ### `CURINFO`
 
-- `MVC CURLEN,RES2+8` extracts the note count; `MVC CURTM,RES2+19` extracts the tempo.
-- `LA 3,SCNAMES`, `LA 2,1`, and `LA 7,8` initialize a scan over eight scale names.
-- `CI1 CLC RES1+17(16),0(3)` compares the result's scale name with the current table entry; `BE CI2` stops on a match.
-- `LA 3,16(3)` advances to the next name; `LA 2,1(2)` advances its scale number; `BCT 7,CI1` repeats for all eight entries.
-- If no name matches, `SR 2,2` sets the scale number to zero.
-- `CI2 LA 2,240(2)` adds 240 so scale 0-8 fits in a byte with a zoned-decimal sign nibble; `STC 2,CURSC` stores the byte; `BR 11` returns.
+- `MVC SRES1,RES1` and `MVC SRES2,RES2` hand the shown result to `MELSAV`; `CALLSAV C` returns the scale digit (`SSC`, 0 if unknown), tempo (`STM`) and note count (`SLEN`).
+- `MVC CURSC,SSC`, `MVC CURLEN,SLEN` and `MVC CURTM,STM` keep them for `SAVEIT` and `MIDIEXP`; `BR 11` returns.
 
 ### `SAVEIT`
 
@@ -402,8 +390,8 @@ Validation lives in the COBOL-68 subprogram `MELVAL` ([`melval.cbl`](../melody/s
 - `MVC SAVCNT,=F'0'` initializes the saved-record count; `LA 3,SVCNTD` / `ST 3,EODRET` arrange for end-of-file to continue at `SVCNTD`.
 - `OPEN (SAVI,INPUT)` opens saved records. `SVCNT GET SAVI` reads one; `L 2,SAVCNT`, `LA 2,1(2)`, and `ST 2,SAVCNT` increment the count; `B SVCNT` repeats until EOD.
 - `SVCNTD CLOSE (SAVI)` closes the input file; `OPEN (SAVO,OUTPUT)` opens the output file.
-- `MVC REC,BLANKS` clears a record; `L 2,SAVCNT` loads the old count; `LA 2,1(2)` chooses the next ID; `CVD 2,TMPD` converts it to packed decimal; `UNPK REC(3),TMPD+6(2)` places three display digits in the record; `OI REC+2,X'F0'` sets the final zoned-decimal sign nibble to a display digit.
-- `MVC REC+3(1),CURSC` stores scale; `MVC REC+4(3),CURTM` stores tempo; `MVC REC+7(2),CURLEN` stores note count; `MVC REC+9(64),RESN` stores 16 four-byte note descriptions; `PUT SAVO,REC` writes the record.
+- `L 2,SAVCNT` loads the old count; `LA 2,1(2)` chooses the next ID; `CVD 2,TMPD` converts it to packed decimal; `UNPK SNUM,TMPD+6(2)` places three display digits in `SNUM`; `OI SNUM+2,X'F0'` sets the final zoned-decimal sign nibble to a display digit.
+- `MVC SNOTES,RESN` copies the 16 four-byte note descriptions; `CALLSAV B` lets `MELSAV` build the 80-byte record from `SNUM`, `SSC`, `STM`, `SLEN` and `SNOTES` (the last three were set by `CURINFO`); `MVC REC,SREC` and `PUT SAVO,REC` write it.
 - `CLOSE (SAVO)` closes output; `MVC MSG,MSGSAV` sets the saved message; `MVC MSG+10(3),REC` inserts the generated ID; `B SVEND` skips the no-result path.
 - `SVNONE MVC MSG,MSGNOS` displays the no-melody message.
 - `SVEND L 10,LNK1` restores the link; `BR 10` returns.
@@ -421,17 +409,13 @@ Validation lives in the COBOL-68 subprogram `MELVAL` ([`melval.cbl`](../melody/s
 
 ### `LOADIT`
 
-- `ST 10,LNK1` preserves the link; `LA 5,LDV` points to the requested ID; `BAL 11,NORM3` validates and normalizes it; `LTR 15,15` / `BNZ LDBAD` rejects nonnumeric input.
+- `ST 10,LNK1` preserves the link; `MVC SNUM,LDV` and `CALLSAV N` ask `MELSAV` to normalize the typed ID; `CLI SRC,C'0'` / `BNE LDBAD` rejects a nonnumeric one.
 - `L 7,NSAV` gets the available entry count; `LTR 7,7` / `BZ LDBAD` rejects an empty list; `LA 8,SAVEDT` starts searching.
-- `LD1 CLC 0(3,8),NORMV` compares the saved three-digit ID; `BE LDOK` selects a match; `LA 8,80(8)` advances one record; `BCT 7,LD1` searches the remaining records.
+- `LD1 CLC 0(3,8),SNUM` compares the saved three-digit ID; `BE LDOK` selects a match; `LA 8,80(8)` advances one record; `BCT 7,LD1` searches the remaining records.
 - `LDBAD MVC MSG,MSGNOL` reports an unknown ID; `B LDEND` skips loading.
-- `LDOK MVC RES1,BLANKS` clears the first displayed result; `MVC RES1(17),=C' MELODY68 SCALE: '` writes its prefix.
-- `SR 2,2`, `IC 2,3(8)`, and `N 2,=F'15'` extract the stored scale; `BZ LD2` skips name insertion for scale zero.
-- `BCTR 2,0`, `MH 2,=H'16'`, and `LA 3,SCNAMES(2)` locate the scale name; `MVC RES1+17(16),0(3)` copies it.
-- `LD2 MVC RES2,BLANKS` clears the second result; `MVC RES2(22),=C' NOTES: nn  TEMPO: ttt'` writes its label; `MVC RES2+8(2),7(8)` inserts count; `MVC RES2+19(3),4(8)` inserts tempo.
-- `MVC RESN,BLANKS` clears note storage; `MVC RESN(64),9(8)` copies the saved notes.
-- `MVC SCV,3(8)`, `MVC NTV,7(8)`, and `MVC TMV,4(8)` populate the screen input fields from the record; `BAL 11,STRIP0` converts defaults to their display form.
-- `MVI HAVRES,C'Y'` marks a result available; `MVI VIEW,C'M'` switches to the main panel; `MVC MSG,MSGLD` loads the loaded-message template; `MVC MSG+8(3),0(8)` inserts the saved ID.
+- `LDOK MVC SREC,0(8)` and `CALLSAV D` let `MELSAV` take the record apart. It returns the scale digit, tempo, note count, notes and the two result lines (`SRES1`, `SRES2`).
+- `MVC RES1,SRES1`, `MVC RES2,SRES2` and `MVC RESN(64),SNOTES` show them as the current melody; `MVC SCV,SSC`, `MVC NTV,SLEN` and `MVC TMV,STM` fill the screen input fields; `BAL 11,STRIP0` converts defaults to their display form.
+- `MVI HAVRES,C'Y'` marks a result available; `MVI VIEW,C'M'` switches to the main panel; `MVC MSG,MSGLD` loads the loaded-message template; `MVC MSG+8(3),SNUM` inserts the saved ID.
 - `LDEND L 10,LNK1` restores the caller link; `BR 10` returns.
 
 ## MIDI generation helpers
@@ -551,8 +535,6 @@ Every label in this section defines data or assembly-time values used by the pre
 | `NTPOS EQU (12-1)*80+15-1` | Address of the note field. |
 | `TMPOS EQU (13-1)*80+15-1` | Address of the tempo field. |
 | `LDPOS EQU (16-1)*80+15-1` | Address of the saved-ID field. |
-| First `SCNAMES DC CL16'C MAJOR'` | 16-byte padded name for scale 1. |
-| Subsequent seven `DC CL16` entries | Padded names for scales 2 through 8, in order: G major, A natural minor, C pentatonic, D dorian, E minor, A minor pentatonic, E minor pentatonic. Each row occupies 16 bytes, which is why scale lookup multiplies the index by 16. |
 | Four `TAB DC X'...'` statements | 64-byte 3270 6-bit-to-terminal address translation table. `INIT` reverses it into `REV`; `PUTSBA` uses it to encode screen addresses. |
 
 ### DCBs
