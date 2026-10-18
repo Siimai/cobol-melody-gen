@@ -58,6 +58,9 @@
        77  WS-J                PIC 99.
        77  WS-K                PIC 99.
        77  WS-LI               PIC 9.
+       77  WS-N                PIC 9.
+       77  WS-NSH              PIC 9.
+       77  WS-K2               PIC 9.
       * --- Key codes (the EBCDIC characters of the AID bytes) ---
        77  WS-PF3              PIC X VALUE '3'.
        77  WS-PF5              PIC X VALUE '5'.
@@ -92,15 +95,19 @@
            05  WS-YEL          PIC X.
       * --- The vertical bar and the plus sign: the upload turns the
       * --- source characters into other codes, so they are made here
-      * --- from their EBCDIC codes, X'4F' and X'4E' ----------------
+      * --- from their EBCDIC codes, X'4F' and X'4E'. The apostrophe
+      * --- (X'7D') cannot be in a literal at all ------------------
        01  WS-BARG.
            05  WS-BAR-N        PIC S9(4) COMP VALUE 79.
            05  WS-PLUS-N       PIC S9(4) COMP VALUE 78.
+           05  WS-APOS-N       PIC S9(4) COMP VALUE 125.
        01  WS-BAR-R REDEFINES WS-BARG.
            05  FILLER          PIC X.
            05  WS-BAR          PIC X.
            05  FILLER          PIC X.
            05  WS-PLUS         PIC X.
+           05  FILLER          PIC X.
+           05  WS-APOS         PIC X.
       * --- X'80' = the user erased the field with EraseEOF ------
        01  WS-ERA-G.
            05  WS-ERA-N        PIC S9(4) COMP VALUE 128.
@@ -193,27 +200,50 @@
        01  WS-LINEF-G          PIC X(14) VALUE 'NNNYNYNYNYNYNN'.
        01  WS-LINEF-R REDEFINES WS-LINEF-G.
            05  WS-LF           PIC X OCCURS 14 TIMES.
-      * --- the start of each row (columns 3-16 of the screen): the
-      * --- clef, the key signature, the time signature and the
-      * --- double bar line; row 4 is made with and without a sharp
+      * --- the start of each row (columns 3-27 of the screen): the
+      * --- clef (11 wide), room for 7 sharps (columns 15-21), the
+      * --- time signature (column 24) and the double bar line
+      * --- (26-27); ! stands for the vertical bar (WS-BAR) and Z
+      * --- for the apostrophe (WS-APOS)
        01  HDR-DATA.
-           05  FILLER          PIC X(14) VALUE '              '.
-           05  FILLER          PIC X(14) VALUE ' ||         ||'.
-           05  FILLER          PIC X(14) VALUE ' ||         ||'.
-           05  FILLER          PIC X(14) VALUE '-||---#-----||'.
-           05  FILLER          PIC X(14) VALUE ' ||         ||'.
-           05  FILLER          PIC X(14) VALUE '-||---------||'.
-           05  FILLER          PIC X(14) VALUE ' ||       4 ||'.
-           05  FILLER          PIC X(14) VALUE '-||-------/-||'.
-           05  FILLER          PIC X(14) VALUE ' ||       4 ||'.
-           05  FILLER          PIC X(14) VALUE '(&)---------||'.
-           05  FILLER          PIC X(14) VALUE ' ||         ||'.
-           05  FILLER          PIC X(14) VALUE '-||---------||'.
-           05  FILLER          PIC X(14) VALUE ' ||         ||'.
-           05  FILLER          PIC X(14) VALUE '              '.
+           05  FILLER          PIC X(25)
+               VALUE '     .                   '.
+           05  FILLER          PIC X(25)
+               VALUE '    /!                 !!'.
+           05  FILLER          PIC X(25)
+               VALUE '   / !                 !!'.
+           05  FILLER          PIC X(25)
+               VALUE '---\-!-----------------!!'.
+           05  FILLER          PIC X(25)
+               VALUE '    \!                 !!'.
+           05  FILLER          PIC X(25)
+               VALUE '---,-!-.---------------!!'.
+           05  FILLER          PIC X(25)
+               VALUE '  /  !  \            4 !!'.
+           05  FILLER          PIC X(25)
+               VALUE '-!--,!-.-!-----------/-!!'.
+           05  FILLER          PIC X(25)
+               VALUE ' ! / !  \!           4 !!'.
+           05  FILLER          PIC X(25)
+               VALUE '-!-!-!-,/--------------!!'.
+           05  FILLER          PIC X(25)
+               VALUE '  \ \!/ /              !!'.
+           05  FILLER          PIC X(25)
+               VALUE '---`-!-Z---------------!!'.
+           05  FILLER          PIC X(25)
+               VALUE '   , !                 !!'.
+           05  FILLER          PIC X(25)
+               VALUE '  (_/                    '.
        01  HDR-TAB REDEFINES HDR-DATA.
-           05  HDR-ROW         PIC X(14) OCCURS 14 TIMES.
-       01  HDR-NOSHARP         PIC X(14) VALUE '-||---------||'.
+           05  HDR-ROW         PIC X(25) OCCURS 14 TIMES.
+      * --- sharps of each scale (1 to 8) and the staff row (1 to
+      * --- 14) of the 7 sharps in the order F C G D A E B --------
+       01  SC-SH-G             PIC 9(8) VALUE 01000101.
+       01  SC-SH-R REDEFINES SC-SH-G.
+           05  SC-SH           PIC 9 OCCURS 8 TIMES.
+       01  SH-ROW-G            PIC 9(7) VALUE 4736958.
+       01  SH-ROW-R REDEFINES SH-ROW-G.
+           05  SH-ROW          PIC 9 OCCURS 7 TIMES.
       * --- the LENGTH and TEMPO lines of the result --------------
        01  WS-RLG.
            05  WS-RL-T         PIC ZZ9.
@@ -275,7 +305,7 @@
       * --- Symbolic maps (generated from MELMAP by the map proc) --
            COPY MELMAP.
       * --- The staff record (map MELMP3) with subscripts: the cursor
-      * --- field, then 14 rows of a start field of 14 characters
+      * --- field, then 14 rows of a start field of 25 characters
       * --- and a music field of 50 characters; every field is
       * --- L(2) A(1) C P H V (4) and the data ---------------------
        01  ROLL-O REDEFINES MELMP1I.
@@ -284,7 +314,7 @@
            05  ST-ROW          OCCURS 14 TIMES.
                10  FILLER      PIC X(7).
                10  ST-HD.
-                   15  ST-HC   PIC X OCCURS 14 TIMES.
+                   15  ST-HC   PIC X OCCURS 25 TIMES.
                10  FILLER      PIC X(7).
                10  ST-MU.
                    15  ST-CH   PIC X OCCURS 50 TIMES.
@@ -494,6 +524,10 @@
        550-STAFF.
            MOVE LOW-VALUES TO MELMP3O.
            PERFORM 551-ROW VARYING WS-K FROM 1 BY 1 UNTIL WS-K > 14.
+           MOVE 0 TO WS-NSH.
+           IF CA-SC > 0 MOVE SC-SH (CA-SC) TO WS-NSH.
+           PERFORM 553-SHARP VARYING WS-N FROM 1 BY 1
+               UNTIL WS-N > WS-NSH.
            MOVE 0 TO WS-T.
            PERFORM 560-NOTE VARYING WS-IX FROM 1 BY 1
                UNTIL WS-IX > CA-CNT.
@@ -502,21 +536,18 @@
            END-EXEC.
        551-ROW.
            MOVE HDR-ROW (WS-K) TO ST-HD (WS-K).
-           IF WS-K = 4 IF CA-SC NOT = 2 IF CA-SC NOT = 6
-               IF CA-SC NOT = 8 MOVE HDR-NOSHARP TO ST-HD (4).
-           IF WS-K > 1 IF WS-K < 14 PERFORM 551A-BARS.
+           TRANSFORM ST-HD (WS-K) CHARACTERS FROM '!' TO WS-BAR.
+           TRANSFORM ST-HD (WS-K) CHARACTERS FROM 'Z' TO WS-APOS.
            PERFORM 552-CELL VARYING WS-J FROM 1 BY 1
                UNTIL WS-J > 50.
            IF WS-K > 3 IF WS-K < 13
                MOVE WS-BAR TO ST-CH (WS-K, 25)
                MOVE WS-BAR TO ST-CH (WS-K, 50).
-      * --- the double bar line after the signatures and, but for the
-      * --- clef row, the clef stem -------------------------------
-       551A-BARS.
-           MOVE WS-BAR TO ST-HC (WS-K, 13).
-           MOVE WS-BAR TO ST-HC (WS-K, 14).
-           IF WS-K NOT = 10 MOVE WS-BAR TO ST-HC (WS-K, 2)
-               MOVE WS-BAR TO ST-HC (WS-K, 3).
+      * --- sharp WS-N of the key signature, one column apart -----
+       553-SHARP.
+           COMPUTE WS-J = 12 + WS-N.
+           MOVE SH-ROW (WS-N) TO WS-K2.
+           MOVE '#' TO ST-HC (WS-K2, WS-J).
        552-CELL.
            IF WS-LF (WS-K) = 'Y' MOVE '-' TO ST-CH (WS-K, WS-J)
            ELSE MOVE SPACE TO ST-CH (WS-K, WS-J).

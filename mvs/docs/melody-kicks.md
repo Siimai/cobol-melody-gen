@@ -57,34 +57,39 @@ The notes are shown on a treble staff (see "Staff" below).
 ## Staff (issue #43, replaces the piano roll of #35)
 
 After a melody is run or loaded, the notes are drawn on a treble staff, rows 8 (B5) to 21 (C4), one row
-for each pitch:
+for each pitch (G major, one sharp):
 
 ```
-09    ||         ||            -A==========-
-10    ||         ||
-11   -||---#-----||----------F=-------------|-------------------------|
-12    ||         ||        E=               |                         |
-13   -||---------||-------------------------|-------------------------|
-14    ||       4 || C====                   |                         |
-15   -||-------/-||-------------------------|-------------------------|
-16    ||       4 ||                         |                         |
-17   (&)---------||-------------------------|G====--------------------|
-18    ||         ||                         |                         |
-19   -||---------||-------------------------|------E=-----------------|
-20    ||         ||                                   D=
-21                                                   -C==========-
+08        .                    B====       B==========
+09       /|                 ||                         -A==========-A=-A====-
+10      / |                 ||
+11   ---\-|------#----------|| ------------------------|------------------------|
+12       \|                 ||                         |                        |
+13   ---,-|-.---------------|| ------------------------|------------------------|
+14     /  |  \            4 ||       C====             |                     C= |
+15   -|--,|-.-|-----------/-|| ------------------------|------------------------|
+16    | / |  \|           4 ||                         |                        |
+17   -|-|-|-,/--------------|| ------------------------|------------------------|
+18     \ \|/ /              ||                         |                        |
+19   ---`-|-'---------------|| ------------------------|------------------------|
+20      , |                 ||
+21     (_/
 ```
 
 - The length is counted in eighth notes (8 to 16 = 1 to 2 bars of 4/4). One eighth is 3 columns, the
-  notes start in column 18, the middle bar line is after 8 eighths (column 42) and the last one after 16
-  (column 67).
+  notes start in column 29, the middle bar line is after 8 eighths (column 53) and the last one after 16
+  (column 78).
 - A note is its letter, then `=` for as long as it lasts: `E=` an eighth, `C====` a quarter,
   `A==========` a half (4 eighths), and a whole note is 8 eighths wide. A note that crosses the
   middle bar line draws over it. Notes A5 and C4 sit on a short ledger line (`-` either side).
-- The start of each row (clef, key signature, time signature, double bar line) is the field `HDnn`, bright
-  white, from the table `HDR-DATA` in the program. The key signature is one `#` on the F5 line for the
-  scales that have F# (G major, E minor, E minor pentatonic) and nothing for the others; a note in the
-  key is drawn without its accidental (an F# in G major is `F=`).
+- The start of each row is the field `HDnn` (columns 3-27, bright white, from the table `HDR-DATA`): the
+  treble clef (columns 3-13, 11 wide, drawn over the staff lines), room for up to 7 sharps (columns 15-21,
+  one column apart, so the staff does not move when the key changes), the time signature 4 / 4 (column 24)
+  and the double bar line (columns 26-27). The key signature is one `#` on the F5 line for the scales that
+  have F# (G major, E minor, E minor pentatonic) and nothing for the others (`SC-SH`); more sharps would go
+  on C5, G5, D5, A4, E5, B4 (`SH-ROW`). A note in the key is drawn without its accidental (an F# in G major
+  is `F=`). The literals use `!` for the vertical bar and `Z` for the apostrophe, which cannot be in a COBOL
+  literal; `TRANSFORM` turns them into the real characters.
 - The music of each row is one field `STnn` of 50 characters, built by the program a character at a time
   (`ST-CH`), staff lines `-` and notes in the same colour. A field is one attribute, so a note has no
   colour of its own: the length of the `=` bar shows the duration (the piano roll of #35 coloured the cells by duration).
@@ -94,7 +99,7 @@ for each pitch:
 - The main map `MELMP1` is sent first, then the staff map `MELMP3` on top of it (no `ERASE`), so the
   screen is built from two sends. `MELMP3` has a one-character unprotected field `SCUR` at the SCALE input
   with `IC`, which puts the cursor back there. The program fills the staff through an overlay
-  (`ROLL-O REDEFINES MELMP1I`): 12 + 8 + 14 x (7 + 14 + 7 + 50) = 1112 bytes, which must have exactly
+  (`ROLL-O REDEFINES MELMP1I`): 12 + 8 + 14 x (7 + 25 + 7 + 50) = 1266 bytes, which must have exactly
   the length of the generated `MELMP3O`, so change both together.
 
 ## Files
