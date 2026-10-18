@@ -12,7 +12,7 @@ Start it at `READY` with `MELOKICK`, press Enter at the start-up messages, press
 
 | Key | Does |
 |---|---|
-| Enter | run a melody. Scale 0-8, notes 8-16 and tempo 40-240 follow the panel's rules (`MELVAL`): blank or 0 means random (tempo: 120), a bad value shows an error and changes nothing |
+| Enter | run a melody. Scale 0-8, length 8-16 eighth notes and tempo 40-240 follow the panel's rules (`MELVAL`): blank or 0 means random (tempo: 120), a bad value shows an error and changes nothing |
 | PF5 | save the shown melody: appended with the next number to the VSAM file |
 | PF6 | list the last 10 saved melodies; type a number and press Enter to load it, PF3 goes back |
 | PF7 | MIDI file as hex text to the destination `MIDI`, see "MIDI" below |
@@ -23,37 +23,84 @@ The last scale, length and tempo are kept in the COMMAREA: a field you leave alo
 Enter with no change makes a new melody with the same settings, and erasing a field (EraseEOF) makes
 it random again.
 
-The notes are shown as a piano roll (see "Piano roll" below).
+The notes are shown on a treble staff (see "Staff" below).
 
-## Screen
+## Screen (issue #43)
+
+```
+            1         2         3         4         5         6         7         8
+   12345678901234567890123456789012345678901234567890123456789012345678901234567890
+01  MELO - MELODY GENERATOR (KICKS)
+02  INPUT                                   |  RESULT
+03  ----------------------------------------+------------------------------------
+04   SCALE  (1-8, BLANK = RANDOM)    [2  ]  |  SCALE  : G MAJOR
+05   EIGHTHS (8-16, BLANK = RANDOM) [16 ]  |  LENGTH :  16 EIGHTHS,  9 NOTES
+06   TEMPO  (040-240, BLANK = 120)   [120]  |  TEMPO  : 120 BPM
+07
+08
+09    ||         ||            -A==========-
+...                                           the staff, rows 8-21
+22  DONE - CHANGE INPUT, ENTER = RUN, PF5 = SAVE
+23  ENTER=RUN   PF5=SAVE   PF6=LIST   PF7=MIDI
+24  PF3=EXIT   CLEAR=NEW
+```
 
 - The input fields are underlined and green, so you can see where to type. Prompts are turquoise, the
-  title and results yellow, the notes white.
+  title and results yellow.
+- `INPUT` is what was typed (blank = random or default); `RESULT` is what the run used, also when an
+  input is blank: the scale name, the length in eighths with the number of notes, and the tempo.
 - The status line (row 22) is red with the bell for errors (`INVALID ...`, `NO SUCH SAVED MELODY`,
   `NOTHING TO SAVE`, `... FAILED`) and green for success (`DONE`, `SAVED`, `LOADED`, `MIDI EXPORTED`).
-- The name of the chosen scale is shown next to the scale input.
 - The cursor starts on the first input of each screen (the load number on the list).
 - The text is the same with or without colour. Not tried on a monochrome terminal.
 
-## Piano roll (issue #35)
+## Staff (issue #43, replaces the piano roll of #35)
 
-After a melody is run or loaded, the notes are drawn as a grid: one row for each pitch, highest at the
-top, one column for each note (numbered 1 to 16). A cell holds the duration letter (`W` whole, `H` half, `Q`
-quarter, `E` eighth) in a colour by duration (pink, yellow, green, turquoise); the other cells hold a blue
-dot.
+After a melody is run or loaded, the notes are drawn on a treble staff, rows 8 (B5) to 21 (C4), one row
+for each pitch (G major, one sharp):
 
-         1  2  3  4  5  6  7  8  9  10 11 12
-      G 5  .  .  .  .  .  .  .  .  .  Q  .  Q
-      E 5  .  H  .  H  .  .  .  .  Q  .  Q  .
-      C 4  H  .  .  .  .  .  .  Q  .  .  .  .
+```
+08        .                    B====       B==========
+09       /|                 ||                         -A==========-A=-A====-
+10      / |                 ||
+11   ---\-|------#----------|| ------------------------|------------------------|
+12       \|                 ||                         |                        |
+13   ---,-|-.---------------|| ------------------------|------------------------|
+14     /  |  \            4 ||       C====             |                     C= |
+15   -|--,|-.-|-----------/-|| ------------------------|------------------------|
+16    | / |  \|           4 ||                         |                        |
+17   -|-|-|-,/--------------|| ------------------------|------------------------|
+18     \ \|/ /              ||                         |                        |
+19   ---`-|-'---------------|| ------------------------|------------------------|
+20      , |                 ||
+21     (_/
+```
 
-- The rows are every pitch of the scale between the lowest and the highest note of the melody, in octaves 4 and 5. If that would be more than 12 rows, only the pitches that the melody uses
-  are shown, at most 12.
-- The main map `MELMP1` is sent first, then the roll map `MELMP3` on top of it (no `ERASE`), so the
+- The length is counted in eighth notes (8 to 16 = 1 to 2 bars of 4/4). One eighth is 3 columns, the
+  notes start in column 29, the middle bar line is after 8 eighths (column 53) and the last one after 16
+  (column 78).
+- A note is its letter, then `=` for as long as it lasts: `E=` an eighth, `C====` a quarter,
+  `A==========` a half (4 eighths), and a whole note is 8 eighths wide. A note that crosses the
+  middle bar line draws over it. Notes A5 and C4 sit on a short ledger line (`-` either side).
+- The start of each row is the field `HDnn` (columns 3-27, bright white, from the table `HDR-DATA`): the
+  treble clef (columns 3-13, 11 wide, drawn over the staff lines), room for up to 7 sharps (columns 15-21,
+  one column apart, so the staff does not move when the key changes), the time signature 4 / 4 (column 24)
+  and the double bar line (columns 26-27). The key signature is one `#` on the F5 line for the scales that
+  have F# (G major, E minor, E minor pentatonic) and nothing for the others (`SC-SH`); more sharps would go
+  on C5, G5, D5, A4, E5, B4 (`SH-ROW`). A note in the key is drawn without its accidental (an F# in G major
+  is `F=`). The literals use `!` for the vertical bar and `Z` for the apostrophe, which cannot be in a COBOL
+  literal; `TRANSFORM` turns them into the real characters.
+- The music of each row is one field `STnn` of 50 characters, built by the program a character at a time
+  (`ST-CH`), staff lines `-` and notes in the same colour. A field is one attribute, so a note has no
+  colour of its own: the length of the `=` bar shows the duration (the piano roll of #35 coloured the cells by duration).
+- The generator draws notes until the length is exactly full (a shorter duration when the next one does
+  not fit), so there are at most 16 notes, the size of the saved record. A melody saved earlier with
+  more than 16 eighths can be loaded; the status line says that only the first 16 eighths are shown.
+- The main map `MELMP1` is sent first, then the staff map `MELMP3` on top of it (no `ERASE`), so the
   screen is built from two sends. `MELMP3` has a one-character unprotected field `SCUR` at the SCALE input
-  with `IC`, which puts the cursor back there. The program fills the roll through an overlay
-  (`ROLL-O REDEFINES MELMP1I`) with subscripts over the 12 x 16 cells; that overlay must have exactly the
-  length of the generated `MELMP3O`, so change both together.
+  with `IC`, which puts the cursor back there. The program fills the staff through an overlay
+  (`ROLL-O REDEFINES MELMP1I`): 12 + 8 + 14 x (7 + 25 + 7 + 50) = 1266 bytes, which must have exactly
+  the length of the generated `MELMP3O`, so change both together.
 
 ## Files
 
@@ -62,7 +109,7 @@ and `upload.sh` sends it (the `bms` library is created on the first upload).
 
 | Repo file | Data set | What |
 |---|---|---|
-| `melody/source/bms/melmap.bms` | `MELODY.SOURCE.BMS(MELMAP)` | BMS mapset `MELMAP`: map `MELMP1` (the melody), `MELMP2` (the saved list) and `MELMP3` (the piano roll) |
+| `melody/source/bms/melmap.bms` | `MELODY.SOURCE.BMS(MELMAP)` | BMS mapset `MELMAP`: map `MELMP1` (the melody), `MELMP2` (the saved list) and `MELMP3` (the staff) |
 | `melody/source/cobol/melokik.cbl` | `MELODY.SOURCE.COBOL(MELOKIK)` | command-level COBOL-68 program for transaction `MELO` |
 | `melody/source/asm/melppt.asm` | `MELODY.SOURCE.ASM(MELPPT)` | program table, suffix `ML` |
 | `melody/source/asm/melpct.asm` | `MELODY.SOURCE.ASM(MELPCT)` | transaction table |
@@ -172,6 +219,15 @@ Things that were not in the guide, or that went wrong:
 - Held job output (`MSGCLASS=H`) is deleted by the first `OUTPUT ... PRINT(*)`, `KEEP` or not. Read it once
   and save what is needed, for example by writing the lines to a file while paging.
 
+- A KICKS session keeps a map in storage once it has loaded it, but fetches the program again for each task.
+  After `MELKMAP` has rebuilt the map, a session that was already running shows the new program with the old
+  map: old labels, the vertical bar as a broken bar, and result fields filled with pieces of other text
+  (the symbolic map no longer matches). Leave KICKS (PF3, then `KSSF`) and start `MELOKICK` again.
+- The vertical bar and the plus sign cannot be typed in the BMS source or in a literal: the card reader
+  upload turns them into other codes (the terminal shows `?` or a blank). The program makes them from the
+  EBCDIC codes X'4F' and X'4E' (`WS-BAR`, `WS-PLUS`), and the map has empty fields for them.
+- `MELVAL` accepts a length of `8` to `16` but rejects `08`; the prompt says `8-16`.
+
 ## Open points
 
 - The tables hold only the system entries the guide names for KSGM, KSSF and K999, plus ours. Other
@@ -181,5 +237,4 @@ Things that were not in the guide, or that went wrong:
 - The guide names no AID-key copybook, so the program defines the key codes itself (the EBCDIC
   characters of the AID bytes X'F3', X'F5', X'F6', X'F7', X'6D'). Other keys act like Enter.
 - Tested as HERC01, HERC02 and HERC04; the user's data sets are created on the first start.
-- The roll shows at most 16 notes and 12 rows; if the melody uses more distinct pitches than 12 the rest are
-  left out without a message.
+- The staff is built from fixed fields of one colour each, so the notes cannot be coloured by duration.

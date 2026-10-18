@@ -46,27 +46,21 @@
        77  MAXNUM              PIC 999.
        77  WS-BR               PIC X.
        77  WS-MKIND            PIC X VALUE SPACE.
-       77  WS-SCN              PIC 9.
-       77  WS-NR               PIC 99.
-       77  WS-OC               PIC 9.
-       77  WS-TI               PIC 99.
-       77  WS-SEMI             PIC 99.
-       77  WS-KEYV             PIC 999.
-       77  WS-KMIN             PIC 999.
-       77  WS-KMAX             PIC 999.
-       77  WS-NDR              PIC 99.
-       77  WS-NDR2             PIC 99.
-       77  WS-MODE             PIC X.
-       77  WS-TAKE             PIC X.
-       77  WS-FOUND            PIC X.
-       77  WS-SI               PIC 99.
-       77  WS-SJ               PIC 99.
-       77  WS-SK               PIC 99.
-       77  WS-TMPK             PIC 999.
-       77  WS-ND               PIC 9.
-       77  WS-TMPL             PIC X(4).
        77  WS-FR1              PIC 999 VALUE 0.
        77  WS-FR2              PIC 999 VALUE 0.
+       77  WS-REM              PIC 99.
+       77  WS-U                PIC 9.
+       77  WS-TOT              PIC 999.
+       77  WS-T                PIC 999.
+       77  WS-E                PIC 99.
+       77  WS-S                PIC 99.
+       77  WS-ES               PIC 99.
+       77  WS-J                PIC 99.
+       77  WS-K                PIC 99.
+       77  WS-LI               PIC 9.
+       77  WS-N                PIC 9.
+       77  WS-NSH              PIC 9.
+       77  WS-K2               PIC 9.
       * --- Key codes (the EBCDIC characters of the AID bytes) ---
        77  WS-PF3              PIC X VALUE '3'.
        77  WS-PF5              PIC X VALUE '5'.
@@ -99,6 +93,21 @@
            05  WS-TRQ          PIC X.
            05  FILLER          PIC X.
            05  WS-YEL          PIC X.
+      * --- The vertical bar and the plus sign: the upload turns the
+      * --- source characters into other codes, so they are made here
+      * --- from their EBCDIC codes, X'4F' and X'4E'. The apostrophe
+      * --- (X'7D') cannot be in a literal at all ------------------
+       01  WS-BARG.
+           05  WS-BAR-N        PIC S9(4) COMP VALUE 79.
+           05  WS-PLUS-N       PIC S9(4) COMP VALUE 78.
+           05  WS-APOS-N       PIC S9(4) COMP VALUE 125.
+       01  WS-BAR-R REDEFINES WS-BARG.
+           05  FILLER          PIC X.
+           05  WS-BAR          PIC X.
+           05  FILLER          PIC X.
+           05  WS-PLUS         PIC X.
+           05  FILLER          PIC X.
+           05  WS-APOS         PIC X.
       * --- X'80' = the user erased the field with EraseEOF ------
        01  WS-ERA-G.
            05  WS-ERA-N        PIC S9(4) COMP VALUE 128.
@@ -133,6 +142,12 @@
            05  FILLER          PIC X(8) VALUE 'LOADED #'.
            05  ML-NUM          PIC XXX.
            05  FILLER          PIC X(59) VALUE SPACES.
+       01  MSG-LONG.
+           05  FILLER          PIC X(8) VALUE 'LOADED #'.
+           05  MLL-NUM         PIC XXX.
+           05  FILLER          PIC X(45)
+               VALUE ' - LONGER THAN 16 EIGHTHS, FIRST 16 ARE SHOWN'.
+           05  FILLER          PIC X(14) VALUE SPACES.
        01  MSG-FAIL.
            05  FILLER          PIC X(26)
                VALUE 'MIDI EXPORT FAILED - RESP '.
@@ -179,33 +194,70 @@
                10  WS-SC-N     OCCURS 7 TIMES.
                    15  WS-SC-CH  PIC X.
                    15  WS-SC-AC  PIC X.
-      * --- Piano roll work areas -------------------------------
-      * --- pitch rows the scale offers (octaves 4 and 5), sorted from
-      * --- the highest down; key = octave * 12 + semitone ---------
-       01  WS-CAND.
-           05  WS-CD           OCCURS 14 TIMES.
-               10  WS-CD-KEY   PIC 999.
-               10  WS-CD-LBL   PIC X(4).
-      * --- the rows that are drawn (at most 12) --------------------
-       01  WS-DISP.
-           05  WS-DR           OCCURS 12 TIMES.
-               10  WS-DR-KEY   PIC 999.
-               10  WS-DR-LBL   PIC X(4).
-      * --- pitch key of each note of the melody -------------------
-       01  WS-NK.
-           05  WS-NKEY         PIC 999 OCCURS 16 TIMES.
-       01  WS-LBLW.
-           05  WS-LB-CH        PIC X.
-           05  WS-LB-AC        PIC X.
-           05  WS-LB-OC        PIC 9.
-           05  FILLER          PIC X VALUE SPACE.
-       01  WS-NG.
-           05  WS-NG1          PIC X.
-           05  WS-NG2          PIC X.
-           05  WS-NG3          PIC X.
-       01  WS-CELL.
-           05  WS-CELL1        PIC X.
-           05  WS-CELL2        PIC X.
+      * --- Staff work areas ------------------------------------
+      * --- one row for each pitch from B5 (1) down to C4 (14); a
+      * --- row is a line (Y) or a space (N) of the staff ----------
+       01  WS-LINEF-G          PIC X(14) VALUE 'NNNYNYNYNYNYNN'.
+       01  WS-LINEF-R REDEFINES WS-LINEF-G.
+           05  WS-LF           PIC X OCCURS 14 TIMES.
+      * --- the start of each row (columns 3-27 of the screen): the
+      * --- clef (11 wide), room for 7 sharps (columns 15-21), the
+      * --- time signature (column 24) and the double bar line
+      * --- (26-27); ! stands for the vertical bar (WS-BAR) and Z
+      * --- for the apostrophe (WS-APOS)
+       01  HDR-DATA.
+           05  FILLER          PIC X(25)
+               VALUE '     .                   '.
+           05  FILLER          PIC X(25)
+               VALUE '    /!                 !!'.
+           05  FILLER          PIC X(25)
+               VALUE '   / !                 !!'.
+           05  FILLER          PIC X(25)
+               VALUE '---\-!-----------------!!'.
+           05  FILLER          PIC X(25)
+               VALUE '    \!                 !!'.
+           05  FILLER          PIC X(25)
+               VALUE '---,-!-.---------------!!'.
+           05  FILLER          PIC X(25)
+               VALUE '  /  !  \            4 !!'.
+           05  FILLER          PIC X(25)
+               VALUE '-!--,!-.-!-----------/-!!'.
+           05  FILLER          PIC X(25)
+               VALUE ' ! / !  \!           4 !!'.
+           05  FILLER          PIC X(25)
+               VALUE '-!-!-!-,/--------------!!'.
+           05  FILLER          PIC X(25)
+               VALUE '  \ \!/ /              !!'.
+           05  FILLER          PIC X(25)
+               VALUE '---`-!-Z---------------!!'.
+           05  FILLER          PIC X(25)
+               VALUE '   , !                 !!'.
+           05  FILLER          PIC X(25)
+               VALUE '  (_/                    '.
+       01  HDR-TAB REDEFINES HDR-DATA.
+           05  HDR-ROW         PIC X(25) OCCURS 14 TIMES.
+      * --- sharps of each scale (1 to 8) and the staff row (1 to
+      * --- 14) of the 7 sharps in the order F C G D A E B --------
+       01  SC-SH-G             PIC 9(8) VALUE 01000101.
+       01  SC-SH-R REDEFINES SC-SH-G.
+           05  SC-SH           PIC 9 OCCURS 8 TIMES.
+       01  SH-ROW-G            PIC 9(7) VALUE 4736958.
+       01  SH-ROW-R REDEFINES SH-ROW-G.
+           05  SH-ROW          PIC 9 OCCURS 7 TIMES.
+      * --- the LENGTH and TEMPO lines of the result --------------
+       01  WS-RLG.
+           05  WS-RL-T         PIC ZZ9.
+           05  FILLER          PIC X(10) VALUE ' EIGHTHS, '.
+           05  WS-RL-C         PIC Z9.
+           05  FILLER          PIC X(6)  VALUE ' NOTES'.
+       01  WS-RTG.
+           05  WS-RT-N         PIC ZZ9.
+           05  FILLER          PIC X(4)  VALUE ' BPM'.
+       01  WS-T3-G.
+           05  WS-T3           PIC 999.
+       01  WS-T3-R REDEFINES WS-T3-G.
+           05  FILLER          PIC X.
+           05  WS-T3-23        PIC XX.
       * --- Areas of the subprograms (same layout as in MELPNL) ---
        01  VAL-AREA.
            05  V-SCALE         PIC X.
@@ -252,30 +304,20 @@
            05  WS-ROW          PIC X(44) OCCURS 10 TIMES.
       * --- Symbolic maps (generated from MELMAP by the map proc) --
            COPY MELMAP.
-      * --- The piano roll record (map MELMP3) with subscripts: a
-      * --- number row, then 12 rows of a label and 16 cells; every
-      * --- field is L(2) A(1) C P H V (4) and the data ------------
+      * --- The staff record (map MELMP3) with subscripts: the cursor
+      * --- field, then 14 rows of a start field of 25 characters
+      * --- and a music field of 50 characters; every field is
+      * --- L(2) A(1) C P H V (4) and the data ---------------------
        01  ROLL-O REDEFINES MELMP1I.
            05  FILLER          PIC X(12).
            05  FILLER          PIC X(8).
-           05  FILLER          PIC XX.
-           05  FILLER          PIC X.
-           05  FILLER          PIC X.
-           05  FILLER          PIC X(3).
-           05  RL-NUM.
-               10  RL-NG       PIC XXX OCCURS 16 TIMES.
-           05  RL-ROW          OCCURS 12 TIMES.
-               10  FILLER      PIC XX.
-               10  RL-LA       PIC X.
-               10  RL-LC       PIC X.
-               10  FILLER      PIC X(3).
-               10  RL-LBL      PIC X(4).
-               10  RL-CELL     OCCURS 16 TIMES.
-                   15  FILLER  PIC XX.
-                   15  RL-CA   PIC X.
-                   15  RL-CC   PIC X.
-                   15  FILLER  PIC X(3).
-                   15  RL-CD   PIC XX.
+           05  ST-ROW          OCCURS 14 TIMES.
+               10  FILLER      PIC X(7).
+               10  ST-HD.
+                   15  ST-HC   PIC X OCCURS 25 TIMES.
+               10  FILLER      PIC X(7).
+               10  ST-MU.
+                   15  ST-CH   PIC X OCCURS 50 TIMES.
        LINKAGE SECTION.
        01  DFHCOMMAREA         PIC X(78).
        PROCEDURE DIVISION.
@@ -294,7 +336,7 @@
            MOVE 0 TO CA-CNT.
            MOVE 0 TO CA-TM.
            MOVE
-           'ENTER SCALE 0-8, NOTES AND TEMPO, THEN PRESS ENTER'
+           'ENTER SCALE 0-8, EIGHTHS AND TEMPO, THEN PRESS ENTER'
                TO WS-MSG.
            PERFORM 500-SHOW-MAIN.
       * --- Later calls: act on the key --------------------------
@@ -313,7 +355,7 @@
            ELSE PERFORM 900-LEAVE.
        215-BACK.
            MOVE 'M' TO CA-VIEW.
-           MOVE 'ENTER SCALE 0-8, NOTES AND TEMPO, THEN PRESS ENTER'
+           MOVE 'ENTER SCALE 0-8, EIGHTHS AND TEMPO, THEN PRESS ENTER'
                TO WS-MSG.
            PERFORM 500-SHOW-MAIN.
        220-PF5.
@@ -355,7 +397,7 @@
                MOVE 'INVALID SCALE - USE 0 TO 8, OR LEAVE BLANK'
                    TO WS-MSG
            ELSE IF V-RC = '2'
-               MOVE 'INVALID NOTES - USE 8 TO 16, OR 0 FOR RANDOM'
+               MOVE 'INVALID LENGTH - USE 8 TO 16, OR 0 FOR RANDOM'
                    TO WS-MSG
            ELSE
                MOVE 'INVALID TEMPO - USE 40 TO 240, OR LEAVE BLANK'
@@ -373,10 +415,11 @@
            IF WS-TEMPO < 40 MOVE 120 TO WS-TEMPO
            ELSE IF WS-TEMPO > 240 MOVE 120 TO WS-TEMPO.
            MOVE SPACES TO CA-NOTES.
-           PERFORM 400-ONE-NOTE VARYING WS-IX FROM 1 BY 1
-               UNTIL WS-IX > WS-LEN.
+           MOVE WS-LEN TO WS-REM.
+           MOVE 0 TO WS-IX.
+           PERFORM 395-NEXT-NOTE UNTIL WS-REM = 0.
            MOVE WS-SCX TO CA-SC.
-           MOVE WS-LEN TO CA-CNT.
+           MOVE WS-IX TO CA-CNT.
            MOVE WS-TEMPO TO CA-TM.
            MOVE 'Y' TO CA-HAV.
            MOVE 'G' TO WS-MKIND.
@@ -397,6 +440,10 @@
            MOVE 9 TO WS-RANGE.
            PERFORM 450-RANDOM.
            COMPUTE WS-LEN = WS-PICK + 8.
+      * --- Notes until WS-REM eighths are used up ---------------
+       395-NEXT-NOTE.
+           ADD 1 TO WS-IX.
+           PERFORM 400-ONE-NOTE.
       * --- Build note WS-IX: pitch, octave 4/5, duration --------
        400-ONE-NOTE.
            MOVE WS-SC-CNT (WS-SCX) TO WS-RANGE.
@@ -413,6 +460,25 @@
            ELSE IF WS-PICK < 15 MOVE 'H' TO CA-N-DUR (WS-IX)
            ELSE IF WS-PICK < 18 MOVE 'E' TO CA-N-DUR (WS-IX)
            ELSE MOVE 'W' TO CA-N-DUR (WS-IX).
+           PERFORM 410-FIT-DUR.
+      * --- A note must not be longer than what is left: a shorter
+      * --- one until it fits (an eighth always does) -------------
+       410-FIT-DUR.
+           PERFORM 415-UNIT.
+           PERFORM 411-SHORTER UNTIL WS-U NOT > WS-REM.
+           SUBTRACT WS-U FROM WS-REM.
+       411-SHORTER.
+           IF CA-N-DUR (WS-IX) = 'W' MOVE 'H' TO CA-N-DUR (WS-IX)
+           ELSE IF CA-N-DUR (WS-IX) = 'H'
+               MOVE 'Q' TO CA-N-DUR (WS-IX)
+           ELSE MOVE 'E' TO CA-N-DUR (WS-IX).
+           PERFORM 415-UNIT.
+      * --- Length of note WS-IX in eighths -----------------------
+       415-UNIT.
+           IF CA-N-DUR (WS-IX) = 'W' MOVE 8 TO WS-U
+           ELSE IF CA-N-DUR (WS-IX) = 'H' MOVE 4 TO WS-U
+           ELSE IF CA-N-DUR (WS-IX) = 'Q' MOVE 2 TO WS-U
+           ELSE MOVE 1 TO WS-U.
       * --- Next LCG value, then WS-PICK in 0 .. WS-RANGE-1 ------
        450-RANDOM.
            COMPUTE WS-WORK = WS-SEED * 25173 + 13849.
@@ -426,18 +492,15 @@
            MOVE WS-C-SCALE TO SCALEO.
            MOVE WS-C-LEN TO NLENO.
            MOVE WS-C-TEMPO TO TEMPOO.
-           IF WS-C-SCALE NUMERIC PERFORM 505-SCALE-NAME.
+           MOVE WS-BAR TO DV2O DV4O DV5O DV6O.
+           MOVE WS-PLUS TO PLUSO.
            IF CA-HAV = 'Y' PERFORM 510-FILL-MELODY.
            MOVE WS-MSG TO MSGO.
            IF WS-MKIND = 'R' MOVE WS-RED TO MSGC.
            IF WS-MKIND = 'G' MOVE WS-GRN TO MSGC.
            IF WS-MKIND = 'R' PERFORM 508-SEND-ALARM
            ELSE PERFORM 509-SEND.
-           IF CA-HAV = 'Y' PERFORM 550-ROLL.
-       505-SCALE-NAME.
-           IF WS-C-SCALE > '0' IF WS-C-SCALE < '9'
-               MOVE WS-C-SCALE TO WS-SCN
-               MOVE WS-SC-NAME (WS-SCN) TO SCNAMEO.
+           IF CA-HAV = 'Y' PERFORM 550-STAFF.
        508-SEND-ALARM.
            EXEC CICS SEND MAP('MELMP1') MAPSET('MELMAP')
                FROM(MELMP1O) ERASE ALARM FREEKB FRSET
@@ -448,153 +511,95 @@
            END-EXEC.
        510-FILL-MELODY.
            IF CA-SC > 0 MOVE WS-SC-NAME (CA-SC) TO SNAMEO.
-           MOVE CA-CNT TO NCOUNTO.
-           MOVE CA-TM TO NTEMPOO.
-      * --- The piano roll: one row for each pitch from the highest
-      * --- note down to the lowest, one column for each note, the
-      * --- duration letter in the cell, coloured by duration ------
-       550-ROLL.
-           PERFORM 551-CANDIDATES.
-           PERFORM 553-SORT.
-           PERFORM 555-RANGE.
-           PERFORM 557-SELECT.
-           PERFORM 560-BUILD.
+           PERFORM 596-TOTAL.
+           MOVE WS-TOT TO WS-RL-T.
+           MOVE CA-CNT TO WS-RL-C.
+           MOVE WS-RLG TO RNOTESO.
+           MOVE CA-TM TO WS-RT-N.
+           MOVE WS-RTG TO RTEMPO.
+      * --- The staff: a row for each pitch from B5 down to C4, the
+      * --- clef, key and time signature at the start, a bar line
+      * --- after 8 eighths and at the end (16), and each note as
+      * --- its letter and = for its length; 3 columns an eighth ---
+       550-STAFF.
+           MOVE LOW-VALUES TO MELMP3O.
+           PERFORM 551-ROW VARYING WS-K FROM 1 BY 1 UNTIL WS-K > 14.
+           MOVE 0 TO WS-NSH.
+           IF CA-SC > 0 MOVE SC-SH (CA-SC) TO WS-NSH.
+           PERFORM 553-SHARP VARYING WS-N FROM 1 BY 1
+               UNTIL WS-N > WS-NSH.
+           MOVE 0 TO WS-T.
+           PERFORM 560-NOTE VARYING WS-IX FROM 1 BY 1
+               UNTIL WS-IX > CA-CNT.
            EXEC CICS SEND MAP('MELMP3') MAPSET('MELMAP')
                FROM(MELMP3O) FREEKB FRSET
            END-EXEC.
-       551-CANDIDATES.
-           MOVE 0 TO WS-NR.
-           PERFORM 552-OCT VARYING WS-OC FROM 4 BY 1 UNTIL WS-OC > 5.
-       552-OCT.
-           PERFORM 552A-TONE VARYING WS-TI FROM 1 BY 1
-               UNTIL WS-TI > WS-SC-CNT (CA-SC).
-       552A-TONE.
-           MOVE WS-SC-CH (CA-SC, WS-TI) TO WS-LB-CH.
-           MOVE WS-SC-AC (CA-SC, WS-TI) TO WS-LB-AC.
-           MOVE WS-OC TO WS-LB-OC.
-           PERFORM 570-SEMI.
-           COMPUTE WS-KEYV = WS-OC * 12 + WS-SEMI.
-           ADD 1 TO WS-NR.
-           MOVE WS-KEYV TO WS-CD-KEY (WS-NR).
-           MOVE WS-LBLW TO WS-CD-LBL (WS-NR).
-       553-SORT.
-           PERFORM 554-PASS VARYING WS-SI FROM 1 BY 1
-               UNTIL WS-SI > WS-NR.
-       554-PASS.
-           PERFORM 554A-CMP VARYING WS-SJ FROM 1 BY 1
-               UNTIL WS-SJ NOT < WS-NR.
-       554A-CMP.
-           COMPUTE WS-SK = WS-SJ + 1.
-           IF WS-CD-KEY (WS-SJ) < WS-CD-KEY (WS-SK)
-               PERFORM 554B-SWAP.
-       554B-SWAP.
-           MOVE WS-CD-KEY (WS-SJ) TO WS-TMPK.
-           MOVE WS-CD-LBL (WS-SJ) TO WS-TMPL.
-           MOVE WS-CD-KEY (WS-SK) TO WS-CD-KEY (WS-SJ).
-           MOVE WS-CD-LBL (WS-SK) TO WS-CD-LBL (WS-SJ).
-           MOVE WS-TMPK TO WS-CD-KEY (WS-SK).
-           MOVE WS-TMPL TO WS-CD-LBL (WS-SK).
-      * --- lowest and highest key of the melody -----------------
-       555-RANGE.
-           MOVE 999 TO WS-KMIN.
-           MOVE 0 TO WS-KMAX.
-           PERFORM 556-NOTEKEY VARYING WS-IX FROM 1 BY 1
+       551-ROW.
+           MOVE HDR-ROW (WS-K) TO ST-HD (WS-K).
+           TRANSFORM ST-HD (WS-K) CHARACTERS FROM '!' TO WS-BAR.
+           TRANSFORM ST-HD (WS-K) CHARACTERS FROM 'Z' TO WS-APOS.
+           PERFORM 552-CELL VARYING WS-J FROM 1 BY 1
+               UNTIL WS-J > 50.
+           IF WS-K > 3 IF WS-K < 13
+               MOVE WS-BAR TO ST-CH (WS-K, 25)
+               MOVE WS-BAR TO ST-CH (WS-K, 50).
+      * --- sharp WS-N of the key signature, one column apart -----
+       553-SHARP.
+           COMPUTE WS-J = 12 + WS-N.
+           MOVE SH-ROW (WS-N) TO WS-K2.
+           MOVE '#' TO ST-HC (WS-K2, WS-J).
+       552-CELL.
+           IF WS-LF (WS-K) = 'Y' MOVE '-' TO ST-CH (WS-K, WS-J)
+           ELSE MOVE SPACE TO ST-CH (WS-K, WS-J).
+      * --- Note WS-IX starts at eighth WS-T (0 to 15) ------------
+       560-NOTE.
+           PERFORM 415-UNIT.
+           IF WS-T < 16 PERFORM 561-DRAW.
+           ADD WS-U TO WS-T.
+       561-DRAW.
+           PERFORM 565-ROWNO.
+           IF WS-K > 0 IF WS-K < 15 PERFORM 562-PLACE.
+       562-PLACE.
+           COMPUTE WS-E = WS-T + WS-U - 1.
+           IF WS-E > 15 MOVE 15 TO WS-E.
+           COMPUTE WS-S = WS-T * 3 + 1.
+           IF WS-T > 7 ADD 1 TO WS-S.
+           COMPUTE WS-ES = WS-E * 3 + 2.
+           IF WS-E > 7 ADD 1 TO WS-ES.
+           PERFORM 563-BAR VARYING WS-J FROM WS-S BY 1
+               UNTIL WS-J > WS-ES.
+           MOVE CA-N-CH (WS-IX) TO ST-CH (WS-K, WS-S).
+           IF WS-K = 2 PERFORM 564-LEDGER
+           ELSE IF WS-K = 14 PERFORM 564-LEDGER.
+       563-BAR.
+           MOVE '=' TO ST-CH (WS-K, WS-J).
+      * --- a short line either side of a note on a ledger line ---
+       564-LEDGER.
+           IF WS-S > 1 COMPUTE WS-J = WS-S - 1
+               MOVE '-' TO ST-CH (WS-K, WS-J).
+           IF WS-ES < 50 COMPUTE WS-J = WS-ES + 1
+               MOVE '-' TO ST-CH (WS-K, WS-J).
+      * --- Row of note WS-IX: 42 - 7 * octave - place of the letter
+      * --- above C (C 0 ... B 6); B5 is row 1, C4 row 14 ----------
+       565-ROWNO.
+           IF CA-N-CH (WS-IX) = 'C' MOVE 0 TO WS-LI
+           ELSE IF CA-N-CH (WS-IX) = 'D' MOVE 1 TO WS-LI
+           ELSE IF CA-N-CH (WS-IX) = 'E' MOVE 2 TO WS-LI
+           ELSE IF CA-N-CH (WS-IX) = 'F' MOVE 3 TO WS-LI
+           ELSE IF CA-N-CH (WS-IX) = 'G' MOVE 4 TO WS-LI
+           ELSE IF CA-N-CH (WS-IX) = 'A' MOVE 5 TO WS-LI
+           ELSE MOVE 6 TO WS-LI.
+           MOVE 0 TO WS-K.
+           IF CA-N-OCT (WS-IX) > 3 IF CA-N-OCT (WS-IX) < 6
+               COMPUTE WS-K = 42 - 7 * CA-N-OCT (WS-IX) - WS-LI.
+      * --- Length of the shown melody in eighths -----------------
+       596-TOTAL.
+           MOVE 0 TO WS-TOT.
+           PERFORM 597-ADD VARYING WS-IX FROM 1 BY 1
                UNTIL WS-IX > CA-CNT.
-       556-NOTEKEY.
-           MOVE CA-N-CH (WS-IX) TO WS-LB-CH.
-           MOVE CA-N-AC (WS-IX) TO WS-LB-AC.
-           PERFORM 570-SEMI.
-           COMPUTE WS-KEYV = CA-N-OCT (WS-IX) * 12 + WS-SEMI.
-           MOVE WS-KEYV TO WS-NKEY (WS-IX).
-           IF WS-KEYV < WS-KMIN MOVE WS-KEYV TO WS-KMIN.
-           IF WS-KEYV > WS-KMAX MOVE WS-KEYV TO WS-KMAX.
-      * --- every scale pitch between the lowest and highest note;
-      * --- if that is more than 12 rows, only the pitches in use --
-       557-SELECT.
-           MOVE 0 TO WS-NDR.
-           PERFORM 558-COUNT VARYING WS-JX FROM 1 BY 1
-               UNTIL WS-JX > WS-NR.
-           IF WS-NDR > 12 MOVE 'U' TO WS-MODE
-           ELSE MOVE 'R' TO WS-MODE.
-           MOVE 0 TO WS-NDR2.
-           PERFORM 559-TAKE VARYING WS-JX FROM 1 BY 1
-               UNTIL WS-JX > WS-NR.
-       558-COUNT.
-           IF WS-CD-KEY (WS-JX) NOT > WS-KMAX
-               IF WS-CD-KEY (WS-JX) NOT < WS-KMIN ADD 1 TO WS-NDR.
-       559-TAKE.
-           IF WS-CD-KEY (WS-JX) NOT > WS-KMAX
-               IF WS-CD-KEY (WS-JX) NOT < WS-KMIN PERFORM 559A-ADD.
-       559A-ADD.
-           MOVE 'N' TO WS-TAKE.
-           IF WS-MODE = 'R' MOVE 'Y' TO WS-TAKE
-           ELSE PERFORM 559B-USED VARYING WS-KX FROM 1 BY 1
-               UNTIL WS-KX > CA-CNT.
-           IF WS-TAKE = 'Y'
-               IF WS-NDR2 < 12 PERFORM 559C-ROW.
-       559B-USED.
-           IF WS-NKEY (WS-KX) = WS-CD-KEY (WS-JX)
-               MOVE 'Y' TO WS-TAKE.
-       559C-ROW.
-           ADD 1 TO WS-NDR2.
-           MOVE WS-CD-KEY (WS-JX) TO WS-DR-KEY (WS-NDR2).
-           MOVE WS-CD-LBL (WS-JX) TO WS-DR-LBL (WS-NDR2).
-      * --- Fill the record of map MELMP3 ------------------------
-       560-BUILD.
-           MOVE LOW-VALUES TO MELMP3O.
-           PERFORM 561-NUMS VARYING WS-IX FROM 1 BY 1
-               UNTIL WS-IX > CA-CNT.
-           PERFORM 562-ROW VARYING WS-JX FROM 1 BY 1
-               UNTIL WS-JX > WS-NDR2.
-           PERFORM 564-PLACE VARYING WS-IX FROM 1 BY 1
-               UNTIL WS-IX > CA-CNT.
-       561-NUMS.
-           MOVE SPACES TO WS-NG.
-           IF WS-IX < 10 PERFORM 561A-ONE
-           ELSE PERFORM 561B-TWO.
-           MOVE WS-NG TO RL-NG (WS-IX).
-       561A-ONE.
-           MOVE WS-IX TO WS-ND.
-           MOVE WS-ND TO WS-NG1.
-       561B-TWO.
-           COMPUTE WS-ND = WS-IX - 10.
-           MOVE '1' TO WS-NG1.
-           MOVE WS-ND TO WS-NG2.
-       562-ROW.
-           MOVE WS-DR-LBL (WS-JX) TO RL-LBL (WS-JX).
-           PERFORM 563-DOT VARYING WS-IX FROM 1 BY 1
-               UNTIL WS-IX > CA-CNT.
-       563-DOT.
-           MOVE '. ' TO RL-CD (WS-JX, WS-IX).
-       564-PLACE.
-           MOVE 'N' TO WS-FOUND.
-           PERFORM 565-MATCH VARYING WS-JX FROM 1 BY 1
-               UNTIL WS-JX > WS-NDR2 OR WS-FOUND = 'Y'.
-       565-MATCH.
-           IF WS-DR-KEY (WS-JX) = WS-NKEY (WS-IX)
-               PERFORM 566-CELL.
-       566-CELL.
-           MOVE 'Y' TO WS-FOUND.
-           MOVE CA-N-DUR (WS-IX) TO WS-CELL1.
-           MOVE SPACE TO WS-CELL2.
-           MOVE WS-CELL TO RL-CD (WS-JX, WS-IX).
-           IF CA-N-DUR (WS-IX) = 'W'
-               MOVE WS-PNK TO RL-CC (WS-JX, WS-IX)
-           ELSE IF CA-N-DUR (WS-IX) = 'H'
-               MOVE WS-YEL TO RL-CC (WS-JX, WS-IX)
-           ELSE IF CA-N-DUR (WS-IX) = 'Q'
-               MOVE WS-GRN TO RL-CC (WS-JX, WS-IX)
-           ELSE MOVE WS-TRQ TO RL-CC (WS-JX, WS-IX).
-      * --- semitone above C of WS-LB-CH / WS-LB-AC --------------
-       570-SEMI.
-           IF WS-LB-CH = 'C' MOVE 0 TO WS-SEMI
-           ELSE IF WS-LB-CH = 'D' MOVE 2 TO WS-SEMI
-           ELSE IF WS-LB-CH = 'E' MOVE 4 TO WS-SEMI
-           ELSE IF WS-LB-CH = 'F' MOVE 5 TO WS-SEMI
-           ELSE IF WS-LB-CH = 'G' MOVE 7 TO WS-SEMI
-           ELSE IF WS-LB-CH = 'A' MOVE 9 TO WS-SEMI
-           ELSE MOVE 11 TO WS-SEMI.
-           IF WS-LB-AC = '#' ADD 1 TO WS-SEMI.
+       597-ADD.
+           PERFORM 415-UNIT.
+           ADD WS-U TO WS-TOT.
       * --- The list form ----------------------------------------
        590-SHOW-LIST.
            MOVE LOW-VALUES TO MELMP2O.
@@ -750,13 +755,18 @@
            MOVE S-TM TO CA-TM.
            MOVE S-NOTES TO CA-NOTES.
            MOVE S-SC TO WS-C-SCALE.
-           MOVE S-LEN TO WS-C-LEN.
+           MOVE SPACES TO WS-C-LEN.
            MOVE S-TM TO WS-C-TEMPO.
            MOVE 'Y' TO CA-HAV.
            MOVE 'M' TO CA-VIEW.
            MOVE S-NUM TO ML-NUM.
+           MOVE S-NUM TO MLL-NUM.
+           PERFORM 596-TOTAL.
+           MOVE WS-TOT TO WS-T3.
+           IF WS-TOT > 7 IF WS-TOT < 17 MOVE WS-T3-23 TO WS-C-LEN.
            MOVE 'G' TO WS-MKIND.
-           MOVE MSG-LOADED TO WS-MSG.
+           IF WS-TOT > 16 MOVE MSG-LONG TO WS-MSG
+           ELSE MOVE MSG-LOADED TO WS-MSG.
            PERFORM 500-SHOW-MAIN.
        825-BAD.
            MOVE 'R' TO WS-MKIND.
