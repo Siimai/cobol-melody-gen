@@ -11,7 +11,7 @@
 # on MELODY.* (group ADMIN).
 # MFHOST: card reader host (default localhost; 172.17.0.1 in the container).
 # --build then runs the matching build job from melody/source/cntl on the
-# mainframe: COBOL -> setup.jcl, ASM -> melscr.jcl, CLIST -> cmdproc.jcl. The
+# mainframe: COBOL -> setup.jcl, ASM -> scrsub.jcl then setup.jcl, CLIST -> cmdproc.jcl. The
 # jobs are the repo files; USER= and PASSWORD= are added to their job card
 # only when they are sent. MFWAIT seconds (default 10) pass between jobs so
 # that each finishes before the next starts.
@@ -92,9 +92,12 @@ for f in $FILES; do echo "  $(dsn_of "$f")($(member_of "$f"))"; done >&2
 
 if [ $BUILD = 1 ]; then
   JOBS=""
-  for want in "COBOL setup" "ASM melscr" "CLIST cmdproc"; do
+  # SETUP links the panel program with the SCRSUB load module, so it
+  # also runs after a change in the assembler source.
+  for want in "ASM scrsub" "ASM setup" "COBOL setup" "CLIST cmdproc"; do
     lib=MELODY.SOURCE.${want%% *}
-    if echo "$LIBS" | grep -qx "$lib"; then JOBS="$JOBS ${want##* }"; fi
+    job=${want##* }
+    if echo "$LIBS" | grep -qx "$lib" && ! echo "$JOBS" | grep -qw "$job"; then JOBS="$JOBS $job"; fi
   done
   for j in $JOBS; do
     jf=melody/source/cntl/$j.jcl

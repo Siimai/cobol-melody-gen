@@ -1,11 +1,11 @@
       * ============================================================
       * MELVAL - input rules of the MELODY full-screen panel.
-      * Called by the assembler front end MELSCR (LOAD + CALL).
+      * Called by the COBOL panel driver MELPNL.
       * Target: MVS 3.8j / TK4- compiler IKFCBL00 (COBOL F), so
       * COBOL-68 only: no END-xxx, no EVALUATE, no intrinsics.
       *
       * VAL-AREA is one 13-byte record, the same layout as the
-      * work fields SCV..TM3 in MELSCR:
+      * work fields of the same name in MELPNL:
       *   in : V-SCALE  1 char, blank or 0-8 (0/blank = random)
       *        V-NOTES  2 chars, blank, 0 or 8-16 (0/blank = random)
       *        V-TEMPO  3 chars, blank, 0 or 40-240 (0/blank = 120)
