@@ -1,13 +1,13 @@
       * ============================================================
       * MELMID - Standard MIDI File of the MELODY full-screen panel.
-      * Called by the assembler front end MELSCR (LOAD + CALL).
-      * It builds the whole file as hex text; MELSCR writes the
+      * Called by the COBOL panel driver MELPNL.
+      * It builds the whole file as hex text; MELPNL writes the
       * text to DD MIDI between the *MIDI-BEGIN and *MIDI-END lines.
       * Target: MVS 3.8j / TK4- compiler IKFCBL00 (COBOL F), so
       * COBOL-68 only: no END-xxx, no EVALUATE, no intrinsics.
       *
       * MID-AREA is one 457-byte record, the same layout as the
-      * work fields NMTM..NMHEX in MELSCR:
+      * work fields M-TEMPO..M-HEX in MELPNL:
       *   in : M-TEMPO  3 digits, 0 or blank = 120
       *        M-COUNT  2 digits, number of notes (1 to 16)
       *        M-NOTES  16 notes of 4 chars: letter C-B, accidental

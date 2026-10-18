@@ -212,9 +212,10 @@ name is the member (upper case, extension ignored):
 | `cobol/melval.cbl` | `MELODY.SOURCE.COBOL(MELVAL)` | COBOL-68 input validation called by the panel |
 | `cobol/melsav.cbl` | `MELODY.SOURCE.COBOL(MELSAV)` | COBOL-68 saved-melody records (build, list row, open) called by the panel |
 | `cobol/melmid.cbl` | `MELODY.SOURCE.COBOL(MELMID)` | COBOL-68 Standard MIDI File builder (hex text) called by the panel |
-| `asm/melscr.asm` | `MELODY.SOURCE.ASM(MELSCR)` | the 3270 panel |
+| `cobol/melpnl.cbl` | `MELODY.SOURCE.COBOL(MELPNL)` | the panel driver: program flow and file I/O (COBOL-68) |
+| `asm/scrsub.asm` | `MELODY.SOURCE.ASM(SCRSUB)` | the 3270 screen subroutine (draw and read only) |
 | `clist/melody.clist`, `melpanel.clist`, `melsetup.clist`, `melbuild.clist` | `MELODY.SOURCE.CLIST(...)` | menu, panel starter, first-run setup, build command |
-| `cntl/setup.jcl`, `melscr.jcl`, `cmdproc.jcl` | `MELODY.SOURCE.CNTL(...)` | build jobs (they read the source from the libraries) |
+| `cntl/setup.jcl`, `scrsub.jcl`, `cmdproc.jcl` | `MELODY.SOURCE.CNTL(...)` | build jobs (they read the source from the libraries) |
 
 The compiled programs go to `MELODY.LOAD`. Nothing is stored in the repo
 for it, and no source is copied inside any JCL.
@@ -262,7 +263,7 @@ mvs/upload.sh --dry-run --build  # print what it would send
 ```
 
 `--build` runs the matching job on the mainframe once the upload is done:
-COBOL changed runs `SETUP`, assembler changed runs `MELSCR`, a CLIST
+COBOL changed runs `SETUP`, assembler changed runs `SCRSUB` then `SETUP` (the driver is linked with the screen routine), a CLIST
 changed runs `CMDPROC` (which copies the CLISTs into `SYS2.CMDPROC` so
 every user can type their name). The jobs run asynchronously and take
 10-20 seconds.
@@ -283,18 +284,18 @@ or submit a single job yourself:
 
 ```
 SUBMIT 'MELODY.SOURCE.CNTL(SETUP)'
-SUBMIT 'MELODY.SOURCE.CNTL(MELSCR)'
+SUBMIT 'MELODY.SOURCE.CNTL(SCRSUB)'
 SUBMIT 'MELODY.SOURCE.CNTL(CMDPROC)'
 ```
 
-`SETUP` creates `MELODY.LOAD`, so run it before `MELSCR` on a fresh
-system. The user needs UPDATE on `MELODY.*`, and `CMDPROC` also needs ALTER
+`SCRSUB` creates `MELODY.LOAD`; run it before `SETUP` on a fresh
+system (`SETUP` links `SCRSUB` into the panel module `MELSCR`). The user needs UPDATE on `MELODY.*`, and `CMDPROC` also needs ALTER
 on `SYS2.*` (group `ADMIN`).
 
 | You changed | Upload it, then run |
 |-------------|---------------------|
 | the COBOL | `SETUP` (`MELBUILD WHAT(COBOL)`) |
-| the assembler | `MELSCR` (`MELBUILD WHAT(ASM)`) |
+| the assembler | `SCRSUB`, then `SETUP` (`MELBUILD WHAT(ASM)`) |
 | a CLIST | `CMDPROC` (`MELBUILD WHAT(CLIST)`) |
 | a job in `cntl/` | nothing; it is read when you submit it |
 
@@ -322,7 +323,7 @@ logged on at the time.
 
 Job output is printed to the emulator's printer and is not readable from a
 container. Check a build by listing the library from TSO, for example
-`LISTDS 'MELODY.LOAD' MEMBERS` (it should show `MELODY68` and `MELSCR`), or
+`LISTDS 'MELODY.LOAD' MEMBERS` (it should show `MELODY68`, `MELSCR` and `SCRSUB`), or
 by running `MELPANEL` once.
 
 ---

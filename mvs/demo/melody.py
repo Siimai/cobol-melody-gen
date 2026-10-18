@@ -5,7 +5,7 @@ usage: melody.py           (reads build/frames.json)
 
 The notes come from the screen of the 'run1' frame, so the sound is the
 melody the program generated. Pitch and length follow what the panel writes
-into the MIDI export (melscr.asm: PITCHF, VQT): note letter and octave digit
+into the MIDI export (melmid.cbl): note letter and octave digit
 give the pitch (C4 = 60, so octave 5 is 12 higher, '#' adds one), W/H/Q/E are
 4/2/1/0.5 beats, and the tempo is the BPM shown on the panel (120 if blank).
 The scale name gives the key and mode that mix.py builds the chords from.

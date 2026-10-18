@@ -1,13 +1,13 @@
       * ============================================================
       * MELSAV - saved-melody rules of the MELODY full-screen panel.
-      * Called by the assembler front end MELSCR (LOAD + CALL).
-      * MELSCR still does the file I/O (DD SAVED) and the screen;
+      * Called by the COBOL panel driver MELPNL.
+      * MELPNL does the file I/O (DD SAVED); SCRSUB the screen;
       * this program only builds and takes apart the records.
       * Target: MVS 3.8j / TK4- compiler IKFCBL00 (COBOL F), so
       * COBOL-68 only: no END-xxx, no EVALUATE, no intrinsics.
       *
       * SAV-AREA is one 359-byte record, the same layout as the
-      * work fields SFUNC..SRES2 in MELSCR.  S-FUNC picks the job:
+      * work fields of the same name in MELPNL.  S-FUNC picks the job:
       *   N  normalize a typed number: S-NUM (1-3 digits typed from
       *      the left, or blank) -> 3 digits, zero filled.
       *      S-RC 0 = ok, 1 = not numeric
