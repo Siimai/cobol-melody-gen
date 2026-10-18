@@ -23,6 +23,16 @@ The last scale, length and tempo are kept in the COMMAREA: a field you leave alo
 Enter with no change makes a new melody with the same settings, and erasing a field (EraseEOF) makes
 it random again. Notes are shown four to a line in the `C 4Q` format of `melody68.cbl`.
 
+## Screen
+
+- The input fields are underlined and green, so you can see where to type. Prompts are turquoise, the
+  title and results yellow, the notes white.
+- The status line (row 22) is red with the bell for errors (`INVALID ...`, `NO SUCH SAVED MELODY`,
+  `NOTHING TO SAVE`, `... FAILED`) and green for success (`DONE`, `SAVED`, `LOADED`, `MIDI EXPORTED`).
+- The name of the chosen scale is shown next to the scale input.
+- The cursor starts on the first input of each screen (the load number on the list).
+- The text is the same with or without colour. Not tried on a monochrome terminal.
+
 ## Files
 
 Same layout as the rest of the project: the path under `mvs/` is the data set, the file is the member,
@@ -119,6 +129,13 @@ Things that were not in the guide, or that went wrong:
 - A `DEFINE CLUSTER` without `UNIQUE` fails with "insufficient suballocation data space".
 - Job output cannot be read from the container except over TSO, and only for job names that start with
   the user ID. See issue #30.
+
+- Colour and underline come from `EXTATT=YES` on the mapset and `COLOR=` / `HILIGHT=` on the fields. The
+  program colours the status line by moving a colour code into the field's `C` item of the symbolic map
+  (`MSGC`, `MSG2C`).
+- `SEND MAP ... ALARM` locks the keyboard unless the command also says `FREEKB`: the map's
+  `CTRL=(FREEKB,FRSET)` is not applied once the command has options of its own. All sends of MELO now
+  give `FREEKB FRSET` themselves.
 
 ## Open points
 
