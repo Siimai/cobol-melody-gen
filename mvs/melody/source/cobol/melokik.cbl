@@ -47,6 +47,24 @@
        77  WS-BR               PIC X.
        77  WS-MKIND            PIC X VALUE SPACE.
        77  WS-SCN              PIC 9.
+       77  WS-NR               PIC 99.
+       77  WS-OC               PIC 9.
+       77  WS-TI               PIC 99.
+       77  WS-SEMI             PIC 99.
+       77  WS-KEYV             PIC 999.
+       77  WS-KMIN             PIC 999.
+       77  WS-KMAX             PIC 999.
+       77  WS-NDR              PIC 99.
+       77  WS-NDR2             PIC 99.
+       77  WS-MODE             PIC X.
+       77  WS-TAKE             PIC X.
+       77  WS-FOUND            PIC X.
+       77  WS-SI               PIC 99.
+       77  WS-SJ               PIC 99.
+       77  WS-SK               PIC 99.
+       77  WS-TMPK             PIC 999.
+       77  WS-ND               PIC 9.
+       77  WS-TMPL             PIC X(4).
        77  WS-FR1              PIC 999 VALUE 0.
        77  WS-FR2              PIC 999 VALUE 0.
       * --- Key codes (the EBCDIC characters of the AID bytes) ---
@@ -59,16 +77,28 @@
            05  WS-NUM3         PIC 999.
        01  WS-NUM3-X REDEFINES WS-NUM3-G.
            05  WS-NUM3-C       PIC XXX.
-      * --- 3270 colour codes for the status line: X'F2' red, X'F4'
-      * --- green (the low byte of a halfword) --------------------
+      * --- 3270 colour codes (the low byte of a halfword): X'F1'
+      * --- blue, F2 red, F3 pink, F4 green, F5 turquoise, F6 yellow
        01  WS-COLORS.
+           05  WS-BLU-N        PIC S9(4) COMP VALUE 241.
            05  WS-RED-N        PIC S9(4) COMP VALUE 242.
+           05  WS-PNK-N        PIC S9(4) COMP VALUE 243.
            05  WS-GRN-N        PIC S9(4) COMP VALUE 244.
+           05  WS-TRQ-N        PIC S9(4) COMP VALUE 245.
+           05  WS-YEL-N        PIC S9(4) COMP VALUE 246.
        01  WS-COLOR-R REDEFINES WS-COLORS.
+           05  FILLER          PIC X.
+           05  WS-BLU          PIC X.
            05  FILLER          PIC X.
            05  WS-RED          PIC X.
            05  FILLER          PIC X.
+           05  WS-PNK          PIC X.
+           05  FILLER          PIC X.
            05  WS-GRN          PIC X.
+           05  FILLER          PIC X.
+           05  WS-TRQ          PIC X.
+           05  FILLER          PIC X.
+           05  WS-YEL          PIC X.
       * --- X'80' = the user erased the field with EraseEOF ------
        01  WS-ERA-G.
            05  WS-ERA-N        PIC S9(4) COMP VALUE 128.
@@ -149,13 +179,33 @@
                10  WS-SC-N     OCCURS 7 TIMES.
                    15  WS-SC-CH  PIC X.
                    15  WS-SC-AC  PIC X.
-      * --- Four display lines of four notes --------------------
-       01  WS-LINES.
-           05  WS-LINE         PIC X(20) OCCURS 4 TIMES.
-       01  WS-DL.
-           05  WS-DL-E         OCCURS 4 TIMES.
-               10  WS-DL-N     PIC X(4).
-               10  FILLER      PIC X.
+      * --- Piano roll work areas -------------------------------
+      * --- pitch rows the scale offers (octaves 4 and 5), sorted from
+      * --- the highest down; key = octave * 12 + semitone ---------
+       01  WS-CAND.
+           05  WS-CD           OCCURS 14 TIMES.
+               10  WS-CD-KEY   PIC 999.
+               10  WS-CD-LBL   PIC X(4).
+      * --- the rows that are drawn (at most 12) --------------------
+       01  WS-DISP.
+           05  WS-DR           OCCURS 12 TIMES.
+               10  WS-DR-KEY   PIC 999.
+               10  WS-DR-LBL   PIC X(4).
+      * --- pitch key of each note of the melody -------------------
+       01  WS-NK.
+           05  WS-NKEY         PIC 999 OCCURS 16 TIMES.
+       01  WS-LBLW.
+           05  WS-LB-CH        PIC X.
+           05  WS-LB-AC        PIC X.
+           05  WS-LB-OC        PIC 9.
+           05  FILLER          PIC X VALUE SPACE.
+       01  WS-NG.
+           05  WS-NG1          PIC X.
+           05  WS-NG2          PIC X.
+           05  WS-NG3          PIC X.
+       01  WS-CELL.
+           05  WS-CELL1        PIC X.
+           05  WS-CELL2        PIC X.
       * --- Areas of the subprograms (same layout as in MELPNL) ---
        01  VAL-AREA.
            05  V-SCALE         PIC X.
@@ -202,6 +252,30 @@
            05  WS-ROW          PIC X(44) OCCURS 10 TIMES.
       * --- Symbolic maps (generated from MELMAP by the map proc) --
            COPY MELMAP.
+      * --- The piano roll record (map MELMP3) with subscripts: a
+      * --- number row, then 12 rows of a label and 16 cells; every
+      * --- field is L(2) A(1) C P H V (4) and the data ------------
+       01  ROLL-O REDEFINES MELMP1I.
+           05  FILLER          PIC X(12).
+           05  FILLER          PIC X(8).
+           05  FILLER          PIC XX.
+           05  FILLER          PIC X.
+           05  FILLER          PIC X.
+           05  FILLER          PIC X(3).
+           05  RL-NUM.
+               10  RL-NG       PIC XXX OCCURS 16 TIMES.
+           05  RL-ROW          OCCURS 12 TIMES.
+               10  FILLER      PIC XX.
+               10  RL-LA       PIC X.
+               10  RL-LC       PIC X.
+               10  FILLER      PIC X(3).
+               10  RL-LBL      PIC X(4).
+               10  RL-CELL     OCCURS 16 TIMES.
+                   15  FILLER  PIC XX.
+                   15  RL-CA   PIC X.
+                   15  RL-CC   PIC X.
+                   15  FILLER  PIC X(3).
+                   15  RL-CD   PIC XX.
        LINKAGE SECTION.
        01  DFHCOMMAREA         PIC X(78).
        PROCEDURE DIVISION.
@@ -359,6 +433,7 @@
            IF WS-MKIND = 'G' MOVE WS-GRN TO MSGC.
            IF WS-MKIND = 'R' PERFORM 508-SEND-ALARM
            ELSE PERFORM 509-SEND.
+           IF CA-HAV = 'Y' PERFORM 550-ROLL.
        505-SCALE-NAME.
            IF WS-C-SCALE > '0' IF WS-C-SCALE < '9'
                MOVE WS-C-SCALE TO WS-SCN
@@ -372,25 +447,154 @@
                FROM(MELMP1O) ERASE FREEKB FRSET
            END-EXEC.
        510-FILL-MELODY.
-           MOVE SPACES TO WS-LINES.
-           PERFORM 520-ONE-LINE VARYING WS-KX FROM 1 BY 1
-               UNTIL WS-KX > 4.
            IF CA-SC > 0 MOVE WS-SC-NAME (CA-SC) TO SNAMEO.
            MOVE CA-CNT TO NCOUNTO.
            MOVE CA-TM TO NTEMPOO.
-           MOVE WS-LINE (1) TO NOTES1O.
-           MOVE WS-LINE (2) TO NOTES2O.
-           MOVE WS-LINE (3) TO NOTES3O.
-           MOVE WS-LINE (4) TO NOTES4O.
-       520-ONE-LINE.
-           MOVE SPACES TO WS-DL.
-           PERFORM 530-ONE-NOTE VARYING WS-JX FROM 1 BY 1
-               UNTIL WS-JX > 4.
-           MOVE WS-DL TO WS-LINE (WS-KX).
-       530-ONE-NOTE.
-           COMPUTE WS-IX = (WS-KX - 1) * 4 + WS-JX.
-           IF WS-IX NOT > CA-CNT
-               MOVE CA-N (WS-IX) TO WS-DL-N (WS-JX).
+      * --- The piano roll: one row for each pitch from the highest
+      * --- note down to the lowest, one column for each note, the
+      * --- duration letter in the cell, coloured by duration ------
+       550-ROLL.
+           PERFORM 551-CANDIDATES.
+           PERFORM 553-SORT.
+           PERFORM 555-RANGE.
+           PERFORM 557-SELECT.
+           PERFORM 560-BUILD.
+           EXEC CICS SEND MAP('MELMP3') MAPSET('MELMAP')
+               FROM(MELMP3O) FREEKB FRSET
+           END-EXEC.
+       551-CANDIDATES.
+           MOVE 0 TO WS-NR.
+           PERFORM 552-OCT VARYING WS-OC FROM 4 BY 1 UNTIL WS-OC > 5.
+       552-OCT.
+           PERFORM 552A-TONE VARYING WS-TI FROM 1 BY 1
+               UNTIL WS-TI > WS-SC-CNT (CA-SC).
+       552A-TONE.
+           MOVE WS-SC-CH (CA-SC, WS-TI) TO WS-LB-CH.
+           MOVE WS-SC-AC (CA-SC, WS-TI) TO WS-LB-AC.
+           MOVE WS-OC TO WS-LB-OC.
+           PERFORM 570-SEMI.
+           COMPUTE WS-KEYV = WS-OC * 12 + WS-SEMI.
+           ADD 1 TO WS-NR.
+           MOVE WS-KEYV TO WS-CD-KEY (WS-NR).
+           MOVE WS-LBLW TO WS-CD-LBL (WS-NR).
+       553-SORT.
+           PERFORM 554-PASS VARYING WS-SI FROM 1 BY 1
+               UNTIL WS-SI > WS-NR.
+       554-PASS.
+           PERFORM 554A-CMP VARYING WS-SJ FROM 1 BY 1
+               UNTIL WS-SJ NOT < WS-NR.
+       554A-CMP.
+           COMPUTE WS-SK = WS-SJ + 1.
+           IF WS-CD-KEY (WS-SJ) < WS-CD-KEY (WS-SK)
+               PERFORM 554B-SWAP.
+       554B-SWAP.
+           MOVE WS-CD-KEY (WS-SJ) TO WS-TMPK.
+           MOVE WS-CD-LBL (WS-SJ) TO WS-TMPL.
+           MOVE WS-CD-KEY (WS-SK) TO WS-CD-KEY (WS-SJ).
+           MOVE WS-CD-LBL (WS-SK) TO WS-CD-LBL (WS-SJ).
+           MOVE WS-TMPK TO WS-CD-KEY (WS-SK).
+           MOVE WS-TMPL TO WS-CD-LBL (WS-SK).
+      * --- lowest and highest key of the melody -----------------
+       555-RANGE.
+           MOVE 999 TO WS-KMIN.
+           MOVE 0 TO WS-KMAX.
+           PERFORM 556-NOTEKEY VARYING WS-IX FROM 1 BY 1
+               UNTIL WS-IX > CA-CNT.
+       556-NOTEKEY.
+           MOVE CA-N-CH (WS-IX) TO WS-LB-CH.
+           MOVE CA-N-AC (WS-IX) TO WS-LB-AC.
+           PERFORM 570-SEMI.
+           COMPUTE WS-KEYV = CA-N-OCT (WS-IX) * 12 + WS-SEMI.
+           MOVE WS-KEYV TO WS-NKEY (WS-IX).
+           IF WS-KEYV < WS-KMIN MOVE WS-KEYV TO WS-KMIN.
+           IF WS-KEYV > WS-KMAX MOVE WS-KEYV TO WS-KMAX.
+      * --- every scale pitch between the lowest and highest note;
+      * --- if that is more than 12 rows, only the pitches in use --
+       557-SELECT.
+           MOVE 0 TO WS-NDR.
+           PERFORM 558-COUNT VARYING WS-JX FROM 1 BY 1
+               UNTIL WS-JX > WS-NR.
+           IF WS-NDR > 12 MOVE 'U' TO WS-MODE
+           ELSE MOVE 'R' TO WS-MODE.
+           MOVE 0 TO WS-NDR2.
+           PERFORM 559-TAKE VARYING WS-JX FROM 1 BY 1
+               UNTIL WS-JX > WS-NR.
+       558-COUNT.
+           IF WS-CD-KEY (WS-JX) NOT > WS-KMAX
+               IF WS-CD-KEY (WS-JX) NOT < WS-KMIN ADD 1 TO WS-NDR.
+       559-TAKE.
+           IF WS-CD-KEY (WS-JX) NOT > WS-KMAX
+               IF WS-CD-KEY (WS-JX) NOT < WS-KMIN PERFORM 559A-ADD.
+       559A-ADD.
+           MOVE 'N' TO WS-TAKE.
+           IF WS-MODE = 'R' MOVE 'Y' TO WS-TAKE
+           ELSE PERFORM 559B-USED VARYING WS-KX FROM 1 BY 1
+               UNTIL WS-KX > CA-CNT.
+           IF WS-TAKE = 'Y'
+               IF WS-NDR2 < 12 PERFORM 559C-ROW.
+       559B-USED.
+           IF WS-NKEY (WS-KX) = WS-CD-KEY (WS-JX)
+               MOVE 'Y' TO WS-TAKE.
+       559C-ROW.
+           ADD 1 TO WS-NDR2.
+           MOVE WS-CD-KEY (WS-JX) TO WS-DR-KEY (WS-NDR2).
+           MOVE WS-CD-LBL (WS-JX) TO WS-DR-LBL (WS-NDR2).
+      * --- Fill the record of map MELMP3 ------------------------
+       560-BUILD.
+           MOVE LOW-VALUES TO MELMP3O.
+           PERFORM 561-NUMS VARYING WS-IX FROM 1 BY 1
+               UNTIL WS-IX > CA-CNT.
+           PERFORM 562-ROW VARYING WS-JX FROM 1 BY 1
+               UNTIL WS-JX > WS-NDR2.
+           PERFORM 564-PLACE VARYING WS-IX FROM 1 BY 1
+               UNTIL WS-IX > CA-CNT.
+       561-NUMS.
+           MOVE SPACES TO WS-NG.
+           IF WS-IX < 10 PERFORM 561A-ONE
+           ELSE PERFORM 561B-TWO.
+           MOVE WS-NG TO RL-NG (WS-IX).
+       561A-ONE.
+           MOVE WS-IX TO WS-ND.
+           MOVE WS-ND TO WS-NG1.
+       561B-TWO.
+           COMPUTE WS-ND = WS-IX - 10.
+           MOVE '1' TO WS-NG1.
+           MOVE WS-ND TO WS-NG2.
+       562-ROW.
+           MOVE WS-DR-LBL (WS-JX) TO RL-LBL (WS-JX).
+           PERFORM 563-DOT VARYING WS-IX FROM 1 BY 1
+               UNTIL WS-IX > CA-CNT.
+       563-DOT.
+           MOVE '. ' TO RL-CD (WS-JX, WS-IX).
+       564-PLACE.
+           MOVE 'N' TO WS-FOUND.
+           PERFORM 565-MATCH VARYING WS-JX FROM 1 BY 1
+               UNTIL WS-JX > WS-NDR2 OR WS-FOUND = 'Y'.
+       565-MATCH.
+           IF WS-DR-KEY (WS-JX) = WS-NKEY (WS-IX)
+               PERFORM 566-CELL.
+       566-CELL.
+           MOVE 'Y' TO WS-FOUND.
+           MOVE CA-N-DUR (WS-IX) TO WS-CELL1.
+           MOVE SPACE TO WS-CELL2.
+           MOVE WS-CELL TO RL-CD (WS-JX, WS-IX).
+           IF CA-N-DUR (WS-IX) = 'W'
+               MOVE WS-PNK TO RL-CC (WS-JX, WS-IX)
+           ELSE IF CA-N-DUR (WS-IX) = 'H'
+               MOVE WS-YEL TO RL-CC (WS-JX, WS-IX)
+           ELSE IF CA-N-DUR (WS-IX) = 'Q'
+               MOVE WS-GRN TO RL-CC (WS-JX, WS-IX)
+           ELSE MOVE WS-TRQ TO RL-CC (WS-JX, WS-IX).
+      * --- semitone above C of WS-LB-CH / WS-LB-AC --------------
+       570-SEMI.
+           IF WS-LB-CH = 'C' MOVE 0 TO WS-SEMI
+           ELSE IF WS-LB-CH = 'D' MOVE 2 TO WS-SEMI
+           ELSE IF WS-LB-CH = 'E' MOVE 4 TO WS-SEMI
+           ELSE IF WS-LB-CH = 'F' MOVE 5 TO WS-SEMI
+           ELSE IF WS-LB-CH = 'G' MOVE 7 TO WS-SEMI
+           ELSE IF WS-LB-CH = 'A' MOVE 9 TO WS-SEMI
+           ELSE MOVE 11 TO WS-SEMI.
+           IF WS-LB-AC = '#' ADD 1 TO WS-SEMI.
       * --- The list form ----------------------------------------
        590-SHOW-LIST.
            MOVE LOW-VALUES TO MELMP2O.
