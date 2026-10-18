@@ -14,6 +14,14 @@ plans/
 # Local secrets (never commit)
 mvs/.secrets/
 
+# Third-party KICKS distribution (downloaded, never commit). The KICKS
+# license forbids putting its objects in public repositories, so all
+# local KICKS install work stays out of git too.
+mvs/kicks-tso-v1r5m0.zip
+mvs/kicks-tso-v1r5m0/
+mvs/kicks/
+*.xmi
+
 # Local tool config
 zapp.yaml
 
