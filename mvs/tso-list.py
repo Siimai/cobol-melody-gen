@@ -8,7 +8,8 @@ Needs s3270 on the PATH. Works from the dev container, because it only
 uses the network, like a real mainframe user.
 
 It logs on to TSO, sends LIST, pages through the output and always logs
-off again. It never sends the password when the user ID is already in use
+off again. Records are read up to 80 columns wide, including the last one
+(see join_wrapped). It never sends the password when the user ID is already in use
 (a rejected logon would swallow the password as a command), and it never
 types LOGOFF unless the last screen line is READY.
 """
@@ -50,6 +51,24 @@ class S3270:
     def last(self):
         L = self.lines()
         return L[-1].strip() if L else ""
+
+
+SCREEN_WIDTH = 80
+
+
+def join_wrapped(rows):
+    """LIST puts one blank in front of every record, so a record that
+    fills all 80 columns needs 81 and its last character wraps to the
+    start of the next screen row. Join that character back onto its record.
+    A wrapped character is a one-character row that does not start with a
+    blank (every LIST row does) and follows a row of the full width."""
+    out = []
+    for r in rows:
+        if out and len(out[-1]) == SCREEN_WIDTH and len(r) == 1 and r != " ":
+            out[-1] += r
+        else:
+            out.append(r)
+    return out
 
 
 def stitch(acc, screen):
@@ -100,6 +119,7 @@ def main():
             if scr and scr[-1].strip() == "READY":
                 break
             s.key("Enter")
+        acc = join_wrapped(acc)
         text = "\n".join(acc)
         if "NOT IN CATALOG" in text or "NOT FOUND" in text or "NOT ALLOCATED" in text:
             sys.exit("data set %s not found" % dsn)
