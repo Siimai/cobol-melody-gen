@@ -7,6 +7,9 @@
 *  PF5 saves the shown melody to DD SAVED, PF6 lists the saved ones
 *  and ENTER on that list loads one by number.  PF7 writes the shown
 *  melody as a Standard MIDI File, in hex text, to DD MIDI.
+*  The input rules (MELVAL) and the saved-melody records (MELSAV) are
+*  COBOL-68 subprograms loaded in INIT; this program does the screen
+*  and the file I/O.
 *  PARM: 'm,userid'  m = S (start) or W (wait for result)
 *  Registers: 12+9 code bases, 13 work area (WORK), 6 build pointer,
 *  10/11 links.
@@ -37,6 +40,16 @@
          MVI   1(6),X'60'
          LA    6,2(6)
          MEND
+         MACRO
+         CALLSAV &F
+         MVI   SFUNC,C'&F'
+         LA    1,SFUNC
+         O     1,=X'80000000'       LAST (ONLY) PARAMETER
+         ST    1,VPLIST
+         LA    1,VPLIST
+         L     15,MELSEP
+         BALR  14,15
+         MEND
 WORK     DSECT
 SAVE     DS    18F
 INLEN    DS    F
@@ -54,6 +67,7 @@ NSAV     DS    F
 LNK1     DS    F
 EODRET   DS    A
 MELVEP   DS    A
+MELSEP   DS    A
 VPLIST   DS    A
 TMPD     DS    D
 AID      DS    X
@@ -71,7 +85,17 @@ SC1      DS    CL1
 NN       DS    CL2
 TM3      DS    CL3
 LDV      DS    CL3
-NORMV    DS    CL3
+SFUNC    DS    C
+SRC      DS    C
+SNUM     DS    CL3
+SSC      DS    CL1
+STM      DS    CL3
+SLEN     DS    CL2
+SNOTES   DS    CL64
+SREC     DS    CL80
+SLINE    DS    CL44
+SRES1    DS    CL80
+SRES2    DS    CL80
 CURLEN   DS    CL2
 CURTM    DS    CL3
 UID      DS    CL8
@@ -180,7 +204,8 @@ PF6      BAL   10,PARSE
          B     LOOP
 EXIT     BAL   10,ENDSCR
          MVC   RETC,=F'0'
-FINISH   DELETE EP=MELVAL
+FINISH   DELETE EP=MELSAV
+         DELETE EP=MELVAL
          L     2,RETC
          L     3,4(13)
          LR    1,13
@@ -201,6 +226,8 @@ INIT1    SR    4,4
          BL    INIT1
          LOAD  EP=MELVAL            COBOL-68 INPUT RULES
          ST    0,MELVEP
+         LOAD  EP=MELSAV            COBOL-68 SAVED-MELODY RULES
+         ST    0,MELSEP
          MVC   MSG,MSG0
          MVI   SCV,C' '
          MVC   NTV,=C'  '
@@ -305,21 +332,9 @@ BUILDL   LA    6,BUF
          B     BL9
 BL1      MVC   ROWC,=F'4'
          LA    8,SAVEDT
-BL2      MVC   TL,BLANKS
-         MVI   TL,C'#'
-         MVC   TL+1(3),0(8)
-         SR    2,2
-         IC    2,3(8)
-         N     2,=F'15'
-         BZ    BL3
-         BCTR  2,0
-         MH    2,=H'16'
-         LA    3,SCNAMES(2)
-         MVC   TL+6(16),0(3)
-BL3      MVC   TL+24(3),4(8)
-         MVC   TL+27(4),=C' BPM'
-         MVC   TL+34(2),7(8)
-         MVC   TL+36(6),=C' NOTES'
+BL2      MVC   SREC,0(8)
+         CALLSAV R
+         MVC   TL,SLINE
          L     2,ROWC
          MH    2,=H'80'
          AH    2,=H'1'
@@ -433,39 +448,6 @@ CPYFLD   LTR   2,2
          LA    5,1(5)
          BCT   2,CPYFLD
          BR    11
-*
-*  NORM3 - R5 = 3-char numeric field -> NORMV right-justified, zero
-*  filled; R15 = 0 if blank or all digits, 4 if not numeric (used
-*  for the saved-melody number; MELVAL does the same for the tempo)
-NORM3    MVC   NORMV,=C'000'
-         LA    4,3
-         CLI   2(5),C' '
-         BNE   NM1
-         BCTR  4,0
-         CLI   1(5),C' '
-         BNE   NM1
-         BCTR  4,0
-         CLI   0(5),C' '
-         BNE   NM1
-         SR    15,15
-         BR    11
-NM1      LR    2,5
-         LR    7,4
-NM2      CLI   0(2),C'0'
-         BL    NMBAD
-         CLI   0(2),C'9'
-         BH    NMBAD
-         LA    2,1(2)
-         BCT   7,NM2
-         LA    3,NORMV+3
-         SR    3,4
-         BCTR  4,0
-         EX    4,MVCNM
-         SR    15,15
-         BR    11
-NMBAD    LA    15,4
-         BR    11
-MVCNM    MVC   0(1,3),0(5)
 *
 *  VALID - check scale, notes and tempo; the rules are in the
 *  COBOL-68 subprogram MELVAL, which gets SCV..TM3 as one record
@@ -612,19 +594,12 @@ RDNO     CLOSE (OUI)
          BR    11
 *
 *  CURINFO - scale digit, length and tempo of the shown melody
-CURINFO  MVC   CURLEN,RES2+8
-         MVC   CURTM,RES2+19
-         LA    3,SCNAMES
-         LA    2,1
-         LA    7,8
-CI1      CLC   RES1+17(16),0(3)
-         BE    CI2
-         LA    3,16(3)
-         LA    2,1(2)
-         BCT   7,CI1
-         SR    2,2
-CI2      LA    2,240(2)
-         STC   2,CURSC
+CURINFO  MVC   SRES1,RES1
+         MVC   SRES2,RES2
+         CALLSAV C
+         MVC   CURSC,SSC
+         MVC   CURLEN,SLEN
+         MVC   CURTM,STM
          BR    11
 *
 *  SAVEIT - append the shown melody to DD SAVED
@@ -643,16 +618,14 @@ SVCNT    GET   SAVI
          B     SVCNT
 SVCNTD   CLOSE (SAVI)
          OPEN  (SAVO,OUTPUT)
-         MVC   REC,BLANKS
          L     2,SAVCNT
          LA    2,1(2)
          CVD   2,TMPD
-         UNPK  REC(3),TMPD+6(2)
-         OI    REC+2,X'F0'
-         MVC   REC+3(1),CURSC
-         MVC   REC+4(3),CURTM
-         MVC   REC+7(2),CURLEN
-         MVC   REC+9(64),RESN
+         UNPK  SNUM,TMPD+6(2)
+         OI    SNUM+2,X'F0'
+         MVC   SNOTES,RESN
+         CALLSAV B
+         MVC   REC,SREC
          PUT   SAVO,REC
          CLOSE (SAVO)
          MVC   MSG,MSGSAV
@@ -694,44 +667,34 @@ LSDONE   CLOSE (SAVI)
 *
 *  LOADIT - show the saved melody whose number is in LDV
 LOADIT   ST    10,LNK1
-         LA    5,LDV
-         BAL   11,NORM3
-         LTR   15,15
-         BNZ   LDBAD
+         MVC   SNUM,LDV
+         CALLSAV N
+         CLI   SRC,C'0'
+         BNE   LDBAD
          L     7,NSAV
          LTR   7,7
          BZ    LDBAD
          LA    8,SAVEDT
-LD1      CLC   0(3,8),NORMV
+LD1      CLC   0(3,8),SNUM
          BE    LDOK
          LA    8,80(8)
          BCT   7,LD1
 LDBAD    MVC   MSG,MSGNOL
          B     LDEND
-LDOK     MVC   RES1,BLANKS
-         MVC   RES1(17),=C' MELODY68 SCALE: '
-         SR    2,2
-         IC    2,3(8)
-         N     2,=F'15'
-         BZ    LD2
-         BCTR  2,0
-         MH    2,=H'16'
-         LA    3,SCNAMES(2)
-         MVC   RES1+17(16),0(3)
-LD2      MVC   RES2,BLANKS
-         MVC   RES2(22),=C' NOTES: nn  TEMPO: ttt'
-         MVC   RES2+8(2),7(8)
-         MVC   RES2+19(3),4(8)
+LDOK     MVC   SREC,0(8)
+         CALLSAV D
+         MVC   RES1,SRES1
+         MVC   RES2,SRES2
          MVC   RESN,BLANKS
-         MVC   RESN(64),9(8)
-         MVC   SCV,3(8)
-         MVC   NTV,7(8)
-         MVC   TMV,4(8)
+         MVC   RESN(64),SNOTES
+         MVC   SCV,SSC
+         MVC   NTV,SLEN
+         MVC   TMV,STM
          BAL   11,STRIP0
          MVI   HAVRES,C'Y'
          MVI   VIEW,C'M'
          MVC   MSG,MSGLD
-         MVC   MSG+8(3),0(8)
+         MVC   MSG+8(3),SNUM
 LDEND    L     10,LNK1
          BR    10
 *
@@ -936,14 +899,6 @@ SCPOS    EQU   (11-1)*80+15-1
 NTPOS    EQU   (12-1)*80+15-1
 TMPOS    EQU   (13-1)*80+15-1
 LDPOS    EQU   (16-1)*80+15-1
-SCNAMES  DC    CL16'C MAJOR'
-         DC    CL16'G MAJOR'
-         DC    CL16'A NATURAL MINOR'
-         DC    CL16'C PENTATONIC'
-         DC    CL16'D DORIAN'
-         DC    CL16'E MINOR'
-         DC    CL16'A MIN PENTATONIC'
-         DC    CL16'E MIN PENTATONIC'
 TAB      DC    X'40C1C2C3C4C5C6C7C8C94A4B4C4D4E4F'
          DC    X'50D1D2D3D4D5D6D7D8D95A5B5C5D5E5F'
          DC    X'6061E2E3E4E5E6E7E8E96A6B6C6D6E6F'
