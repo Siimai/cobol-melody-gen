@@ -21,7 +21,9 @@ Start it at `READY` with `MELOKICK`, press Enter at the start-up messages, press
 
 The last scale, length and tempo are kept in the COMMAREA: a field you leave alone keeps its value,
 Enter with no change makes a new melody with the same settings, and erasing a field (EraseEOF) makes
-it random again. Notes are shown four to a line in the `C 4Q` format of `melody68.cbl`.
+it random again.
+
+The notes are shown as a piano roll (see "Piano roll" below).
 
 ## Screen
 
@@ -33,6 +35,26 @@ it random again. Notes are shown four to a line in the `C 4Q` format of `melody6
 - The cursor starts on the first input of each screen (the load number on the list).
 - The text is the same with or without colour. Not tried on a monochrome terminal.
 
+## Piano roll (issue #35)
+
+After a melody is run or loaded, the notes are drawn as a grid: one row for each pitch, highest at the
+top, one column for each note (numbered 1 to 16). A cell holds the duration letter (`W` whole, `H` half, `Q`
+quarter, `E` eighth) in a colour by duration (pink, yellow, green, turquoise); the other cells hold a blue
+dot.
+
+         1  2  3  4  5  6  7  8  9  10 11 12
+      G 5  .  .  .  .  .  .  .  .  .  Q  .  Q
+      E 5  .  H  .  H  .  .  .  .  Q  .  Q  .
+      C 4  H  .  .  .  .  .  .  Q  .  .  .  .
+
+- The rows are every pitch of the scale between the lowest and the highest note of the melody, in octaves 4 and 5. If that would be more than 12 rows, only the pitches that the melody uses
+  are shown, at most 12.
+- The main map `MELMP1` is sent first, then the roll map `MELMP3` on top of it (no `ERASE`), so the
+  screen is built from two sends. `MELMP3` has a one-character unprotected field `SCUR` at the SCALE input
+  with `IC`, which puts the cursor back there. The program fills the roll through an overlay
+  (`ROLL-O REDEFINES MELMP1I`) with subscripts over the 12 x 16 cells; that overlay must have exactly the
+  length of the generated `MELMP3O`, so change both together.
+
 ## Files
 
 Same layout as the rest of the project: the path under `mvs/` is the data set, the file is the member,
@@ -40,7 +62,7 @@ and `upload.sh` sends it (the `bms` library is created on the first upload).
 
 | Repo file | Data set | What |
 |---|---|---|
-| `melody/source/bms/melmap.bms` | `MELODY.SOURCE.BMS(MELMAP)` | BMS mapset `MELMAP`: map `MELMP1` (the melody) and `MELMP2` (the saved list) |
+| `melody/source/bms/melmap.bms` | `MELODY.SOURCE.BMS(MELMAP)` | BMS mapset `MELMAP`: map `MELMP1` (the melody), `MELMP2` (the saved list) and `MELMP3` (the piano roll) |
 | `melody/source/cobol/melokik.cbl` | `MELODY.SOURCE.COBOL(MELOKIK)` | command-level COBOL-68 program for transaction `MELO` |
 | `melody/source/asm/melppt.asm` | `MELODY.SOURCE.ASM(MELPPT)` | program table, suffix `ML` |
 | `melody/source/asm/melpct.asm` | `MELODY.SOURCE.ASM(MELPCT)` | transaction table |
@@ -137,6 +159,19 @@ Things that were not in the guide, or that went wrong:
   `CTRL=(FREEKB,FRSET)` is not applied once the command has options of its own. All sends of MELO now
   give `FREEKB FRSET` themselves.
 
+- The `CURSOR(data-value)` option of `SEND MAP` is accepted by the preprocessor but did not move the
+  cursor on the second send (it stayed at row 1, column 1, which is protected, so the keyboard locked on
+  the first typed character; the program said `CURSOR(191)`, the data position of SCALE). An `IC` field in
+  the map that is sent last works.
+- A key press needs the cursor on an unprotected field. A test script that types on such a screen locks
+  the keyboard (`s3270` `Reset` clears it); the user ID then stays IN USE if the script cannot log off.
+- The map job (`MELKMAP`) and the compile job (`MELKCOB`) must not run at the same time: the compile
+  reads the copybook that the map job writes, and the two jobs overlapped here (there is more than one
+  initiator). With the old copybook the compile ended with `IKF2118I-C` (the overlay was longer than the
+  record). Submit the compile when the map job has ended.
+- Held job output (`MSGCLASS=H`) is deleted by the first `OUTPUT ... PRINT(*)`, `KEEP` or not. Read it once
+  and save what is needed, for example by writing the lines to a file while paging.
+
 ## Open points
 
 - The tables hold only the system entries the guide names for KSGM, KSSF and K999, plus ours. Other
@@ -145,4 +180,6 @@ Things that were not in the guide, or that went wrong:
   the second spelling.
 - The guide names no AID-key copybook, so the program defines the key codes itself (the EBCDIC
   characters of the AID bytes X'F3', X'F5', X'F6', X'F7', X'6D'). Other keys act like Enter.
-- Tested as HERC04 only; the user's data sets are created on the first start.
+- Tested as HERC01, HERC02 and HERC04; the user's data sets are created on the first start.
+- The roll shows at most 16 notes and 12 rows; if the melody uses more distinct pitches than 12 the rest are
+  left out without a message.
