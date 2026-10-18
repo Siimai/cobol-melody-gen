@@ -12,6 +12,11 @@ GitHub CLI (`gh`), and the Claude Code CLI itself. Claude's config
 live on named Docker volumes so they survive container rebuilds. After the
 first rebuild run `gh auth login` once.
 
+The Hercules/TK4- printer output directory
+`$HOME/opt/tk4-_v1.00_current/prt` on the host (`${localEnv:HOME}` in `devcontainer.json`) is bind-mounted
+read-only at `/mnt/tk4-prt` (e.g. `/mnt/tk4-prt/prt00e.txt`). The host path
+must exist, or the container fails to start.
+
 ## Reusing it in another project (git submodule)
 
 Add this repo as a submodule *at* the target project's `.devcontainer/` path

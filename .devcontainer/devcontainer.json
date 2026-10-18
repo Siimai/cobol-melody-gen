@@ -9,6 +9,7 @@
   },
   "mounts": [
     "source=claude-config,target=/home/ubuntu/.claude,type=volume",
-    "source=gh-config,target=/home/ubuntu/.config/gh,type=volume"
+    "source=gh-config,target=/home/ubuntu/.config/gh,type=volume",
+    "source=${localEnv:HOME}/opt/tk4-_v1.00_current/prt,target=/mnt/tk4-prt,type=bind,readonly"
   ]
 }
