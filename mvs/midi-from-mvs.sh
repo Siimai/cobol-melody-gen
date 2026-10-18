@@ -3,6 +3,8 @@
 # write it as a real .mid file. The panel keeps the export as hex text in
 # <user>.MELODY.MIDI; this reads it over a TSO session (tso-list.py).
 # usage: midi-from-mvs.sh [OUTFILE]
+# MIDIDS picks the data set: MIDI (default, the panel) or MIDIK (the KICKS
+# transaction MELO): MIDIDS=MIDIK midi-from-mvs.sh
 # Needs s3270 and python3. MFUSER / MFPASS / MFHOST come from the
 # environment or mvs/.secrets/env. The user must not be logged on.
 set -e
@@ -12,7 +14,7 @@ cd "$(dirname "$0")"
 : "${MFPASS:?set MFPASS (or create mvs/.secrets/env)}"
 export MFUSER MFPASS MFHOST
 OUT=${1:-../gnucobol/output/melody_$(date +%Y%m%d_%H%M%S).mid}
-RAW=$(./tso-list.py "$MFUSER.MELODY.MIDI")
+RAW=$(./tso-list.py "$MFUSER.MELODY.${MIDIDS:-MIDI}")
 # keep only the hex records between the markers (last export in the data set)
 HEX=$(printf '%s\n' "$RAW" | awk '
   /\*MIDI-BEGIN/ { buf=""; on=1; next }
