@@ -45,6 +45,8 @@
        77  NSAV                PIC S9(4) COMP.
        77  MAXNUM              PIC 999.
        77  WS-BR               PIC X.
+       77  WS-MKIND            PIC X VALUE SPACE.
+       77  WS-SCN              PIC 9.
        77  WS-FR1              PIC 999 VALUE 0.
        77  WS-FR2              PIC 999 VALUE 0.
       * --- Key codes (the EBCDIC characters of the AID bytes) ---
@@ -57,6 +59,16 @@
            05  WS-NUM3         PIC 999.
        01  WS-NUM3-X REDEFINES WS-NUM3-G.
            05  WS-NUM3-C       PIC XXX.
+      * --- 3270 colour codes for the status line: X'F2' red, X'F4'
+      * --- green (the low byte of a halfword) --------------------
+       01  WS-COLORS.
+           05  WS-RED-N        PIC S9(4) COMP VALUE 242.
+           05  WS-GRN-N        PIC S9(4) COMP VALUE 244.
+       01  WS-COLOR-R REDEFINES WS-COLORS.
+           05  FILLER          PIC X.
+           05  WS-RED          PIC X.
+           05  FILLER          PIC X.
+           05  WS-GRN          PIC X.
       * --- X'80' = the user erased the field with EraseEOF ------
        01  WS-ERA-G.
            05  WS-ERA-N        PIC S9(4) COMP VALUE 128.
@@ -215,6 +227,7 @@
        200-NEXT.
            MOVE DFHCOMMAREA TO WS-COMM.
            MOVE SPACES TO WS-MSG.
+           MOVE SPACE TO WS-MKIND.
            IF EIBAID = WS-PF3 PERFORM 210-PF3
            ELSE IF EIBAID = WS-CLEAR PERFORM 100-NEW
            ELSE IF EIBAID = WS-PF5 PERFORM 220-PF5
@@ -263,6 +276,7 @@
            IF V-RC = '0' PERFORM 310-RUN
            ELSE PERFORM 305-BAD.
        305-BAD.
+           MOVE 'R' TO WS-MKIND.
            IF V-RC = '1'
                MOVE 'INVALID SCALE - USE 0 TO 8, OR LEAVE BLANK'
                    TO WS-MSG
@@ -291,6 +305,7 @@
            MOVE WS-LEN TO CA-CNT.
            MOVE WS-TEMPO TO CA-TM.
            MOVE 'Y' TO CA-HAV.
+           MOVE 'G' TO WS-MKIND.
            MOVE 'DONE - CHANGE INPUT, ENTER = RUN, PF5 = SAVE'
                TO WS-MSG.
            PERFORM 500-SHOW-MAIN.
@@ -337,10 +352,24 @@
            MOVE WS-C-SCALE TO SCALEO.
            MOVE WS-C-LEN TO NLENO.
            MOVE WS-C-TEMPO TO TEMPOO.
+           IF WS-C-SCALE NUMERIC PERFORM 505-SCALE-NAME.
            IF CA-HAV = 'Y' PERFORM 510-FILL-MELODY.
            MOVE WS-MSG TO MSGO.
+           IF WS-MKIND = 'R' MOVE WS-RED TO MSGC.
+           IF WS-MKIND = 'G' MOVE WS-GRN TO MSGC.
+           IF WS-MKIND = 'R' PERFORM 508-SEND-ALARM
+           ELSE PERFORM 509-SEND.
+       505-SCALE-NAME.
+           IF WS-C-SCALE > '0' IF WS-C-SCALE < '9'
+               MOVE WS-C-SCALE TO WS-SCN
+               MOVE WS-SC-NAME (WS-SCN) TO SCNAMEO.
+       508-SEND-ALARM.
            EXEC CICS SEND MAP('MELMP1') MAPSET('MELMAP')
-               FROM(MELMP1O) ERASE
+               FROM(MELMP1O) ERASE ALARM FREEKB FRSET
+           END-EXEC.
+       509-SEND.
+           EXEC CICS SEND MAP('MELMP1') MAPSET('MELMAP')
+               FROM(MELMP1O) ERASE FREEKB FRSET
            END-EXEC.
        510-FILL-MELODY.
            MOVE SPACES TO WS-LINES.
@@ -376,8 +405,17 @@
            MOVE WS-ROW (9) TO ROW09O.
            MOVE WS-ROW (10) TO ROW10O.
            MOVE WS-MSG TO MSG2O.
+           IF WS-MKIND = 'R' MOVE WS-RED TO MSG2C.
+           IF WS-MKIND = 'G' MOVE WS-GRN TO MSG2C.
+           IF WS-MKIND = 'R' PERFORM 598-LIST-ALARM
+           ELSE PERFORM 599-LIST-SEND.
+       598-LIST-ALARM.
            EXEC CICS SEND MAP('MELMP2') MAPSET('MELMAP')
-               FROM(MELMP2O) ERASE
+               FROM(MELMP2O) ERASE ALARM FREEKB FRSET
+           END-EXEC.
+       599-LIST-SEND.
+           EXEC CICS SEND MAP('MELMP2') MAPSET('MELMAP')
+               FROM(MELMP2O) ERASE FREEKB FRSET
            END-EXEC.
        900-LEAVE.
            EXEC CICS SEND TEXT FROM(WS-BYE) LENGTH(28) ERASE FREEKB
@@ -425,6 +463,7 @@
        800-SAVE.
            IF CA-HAV NOT = 'Y'
                MOVE 'NOTHING TO SAVE - RUN A MELODY FIRST' TO WS-MSG
+               MOVE 'R' TO WS-MKIND
                PERFORM 500-SHOW-MAIN
            ELSE PERFORM 801-SAVE-IT.
        801-SAVE-IT.
@@ -448,8 +487,10 @@
            END-EXEC.
            IF WS-RESP = DFHRESP(NORMAL)
                MOVE S-NUM TO MS-NUM
+               MOVE 'G' TO WS-MKIND
                MOVE MSG-SAVED TO WS-MSG
-           ELSE MOVE 'SAVE FAILED - SEE THE SAVE FILE MELSAVE'
+           ELSE MOVE 'R' TO WS-MKIND
+               MOVE 'SAVE FAILED - SEE THE SAVE FILE MELSAVE'
                TO WS-MSG.
            PERFORM 500-SHOW-MAIN.
       * --- PF6: the list of the last 10 saved melodies ----------
@@ -510,9 +551,11 @@
            MOVE 'Y' TO CA-HAV.
            MOVE 'M' TO CA-VIEW.
            MOVE S-NUM TO ML-NUM.
+           MOVE 'G' TO WS-MKIND.
            MOVE MSG-LOADED TO WS-MSG.
            PERFORM 500-SHOW-MAIN.
        825-BAD.
+           MOVE 'R' TO WS-MKIND.
            MOVE 'NO SUCH SAVED MELODY' TO WS-MSG.
            PERFORM 811-BUILD-ROWS.
            PERFORM 590-SHOW-LIST.
@@ -522,6 +565,7 @@
        830-MIDI.
            IF CA-HAV NOT = 'Y'
                MOVE 'NOTHING TO EXPORT - RUN A MELODY FIRST' TO WS-MSG
+               MOVE 'R' TO WS-MKIND
                PERFORM 500-SHOW-MAIN
            ELSE PERFORM 831-EXPORT.
        831-EXPORT.
@@ -541,6 +585,7 @@
            PERFORM 835-PUT.
            IF WS-FR1 = 0
                MOVE M-BYTES TO MM-BYTES
+               MOVE 'G' TO WS-MKIND
                MOVE MSG-MIDI TO WS-MSG
            ELSE PERFORM 836-FAIL-MSG.
            PERFORM 500-SHOW-MAIN.
@@ -557,6 +602,7 @@
                MOVE WS-RESP TO WS-FR1
                MOVE EIBRESP2 TO WS-FR2.
        836-FAIL-MSG.
+           MOVE 'R' TO WS-MKIND.
            MOVE WS-FR1 TO MF-R1.
            MOVE WS-FR2 TO MF-R2.
            MOVE MSG-FAIL TO WS-MSG.
