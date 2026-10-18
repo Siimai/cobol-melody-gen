@@ -214,6 +214,15 @@ Things that were not in the guide, or that went wrong:
 - Held job output (`MSGCLASS=H`) is deleted by the first `OUTPUT ... PRINT(*)`, `KEEP` or not. Read it once
   and save what is needed, for example by writing the lines to a file while paging.
 
+- A KICKS session keeps a map in storage once it has loaded it, but fetches the program again for each task.
+  After `MELKMAP` has rebuilt the map, a session that was already running shows the new program with the old
+  map: old labels, the vertical bar as a broken bar, and result fields filled with pieces of other text
+  (the symbolic map no longer matches). Leave KICKS (PF3, then `KSSF`) and start `MELOKICK` again.
+- The vertical bar and the plus sign cannot be typed in the BMS source or in a literal: the card reader
+  upload turns them into other codes (the terminal shows `?` or a blank). The program makes them from the
+  EBCDIC codes X'4F' and X'4E' (`WS-BAR`, `WS-PLUS`), and the map has empty fields for them.
+- `MELVAL` accepts a length of `8` to `16` but rejects `08`; the prompt says `8-16`.
+
 ## Open points
 
 - The tables hold only the system entries the guide names for KSGM, KSSF and K999, plus ours. Other
