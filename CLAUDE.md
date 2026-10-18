@@ -72,7 +72,8 @@ Everything for the mainframe lives under `mvs/` and is separate from the GnuCOBO
 
 **COBOL on the mainframe is COBOL-68 (IKFCBL00, COBOL F)**
 - Fixed format, upper case, columns 8-72. No intrinsic functions, no `END-xxx`, no inline `PERFORM`, no `EVALUATE`, no reference modification, no `STRING`/`INSPECT`. Use period-terminated sentences, `PERFORM paragraph`, nested `IF ... ELSE`.
-- `77` items must come before `01` items. `VALUE` literals must not exceed their `PIC`.
+- `77` items must come before `01` items. `VALUE` literals must not exceed their `PIC`: count the characters, including blanks, because the compiler gives a C-level error (`IKF2126I-C`) and the build stops. A subscript cannot contain arithmetic (`TAB (I + 1)` is rejected): compute the index into a work item first.
+- Before uploading a COBOL-68 member, read it once for these rules: `77` before `01`, literal lengths, no reference modification, no arithmetic in subscripts.
 - Time comes from the `TIME-OF-DAY` special register (`ACCEPT ... FROM TIME` is not defined). Random numbers come from a hand-written 16-bit LCG with `COMPUTE` truncation.
 - A one-card `ACCEPT` reads `SYSIN`, so parameterise the program through a card.
 - Compile once with `COBUCL` into `<user>.MELODY.LOAD` and run with `EXEC PGM=` and `STEPLIB`. Write program output to a dataset (`SYSOUT DD DSN=...,DISP=SHR`), not to a held spool class, then read it from TSO or the host.
