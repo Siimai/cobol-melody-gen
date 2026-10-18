@@ -53,6 +53,8 @@ MLEN     DS    F
 NSAV     DS    F
 LNK1     DS    F
 EODRET   DS    A
+MELVEP   DS    A
+VPLIST   DS    A
 TMPD     DS    D
 AID      DS    X
 MODE     DS    C
@@ -60,17 +62,16 @@ VIEW     DS    C
 VALOK    DS    C
 HAVRES   DS    C
 EODF     DS    C
-N1       DS    C
-N2       DS    C
 CURSC    DS    C
 SCV      DS    CL1
 NTV      DS    CL2
 TMV      DS    CL3
+VRC      DS    CL1
+SC1      DS    CL1
+NN       DS    CL2
+TM3      DS    CL3
 LDV      DS    CL3
 NORMV    DS    CL3
-TM3      DS    CL3
-NN       DS    CL2
-SC1      DS    CL1
 CURLEN   DS    CL2
 CURTM    DS    CL3
 UID      DS    CL8
@@ -179,7 +180,8 @@ PF6      BAL   10,PARSE
          B     LOOP
 EXIT     BAL   10,ENDSCR
          MVC   RETC,=F'0'
-FINISH   L     2,RETC
+FINISH   DELETE EP=MELVAL
+         L     2,RETC
          L     3,4(13)
          LR    1,13
          FREEMAIN R,LV=WORKLEN,A=(1)
@@ -197,6 +199,8 @@ INIT1    SR    4,4
          LA    3,1(3)
          C     3,=F'64'
          BL    INIT1
+         LOAD  EP=MELVAL            COBOL-68 INPUT RULES
+         ST    0,MELVEP
          MVC   MSG,MSG0
          MVI   SCV,C' '
          MVC   NTV,=C'  '
@@ -431,7 +435,8 @@ CPYFLD   LTR   2,2
          BR    11
 *
 *  NORM3 - R5 = 3-char numeric field -> NORMV right-justified, zero
-*  filled; R15 = 0 if blank or all digits, 4 if not numeric
+*  filled; R15 = 0 if blank or all digits, 4 if not numeric (used
+*  for the saved-melody number; MELVAL does the same for the tempo)
 NORM3    MVC   NORMV,=C'000'
          LA    4,3
          CLI   2(5),C' '
@@ -462,78 +467,30 @@ NMBAD    LA    15,4
          BR    11
 MVCNM    MVC   0(1,3),0(5)
 *
-*  VALID - check scale 0-8, notes 0 or 8-16, tempo 0 or 40-240
+*  VALID - check scale, notes and tempo; the rules are in the
+*  COBOL-68 subprogram MELVAL, which gets SCV..TM3 as one record
 VALID    ST    10,LNK1
          MVI   VALOK,C'N'
-         CLI   SCV,C' '
-         BE    V1
-         CLI   SCV,C'0'
-         BL    VBAD1
-         CLI   SCV,C'8'
-         BH    VBAD1
-V1       MVC   N1,NTV
-         MVC   N2,NTV+1
-         CLI   N1,C' '
-         BNE   V2
-         MVC   N1,N2
-         MVI   N2,C' '
-V2       CLI   N1,C' '
-         BE    VT
-         CLI   N1,C'0'
-         BL    VBAD2
-         CLI   N1,C'9'
-         BH    VBAD2
-         CLI   N2,C' '
-         BNE   V3
-         CLI   N1,C'0'
-         BE    VT
-         CLI   N1,C'8'
-         BL    VBAD2
-         B     VT
-V3       CLI   N2,C'0'
-         BL    VBAD2
-         CLI   N2,C'9'
-         BH    VBAD2
-         CLI   N1,C'1'
-         BNE   VBAD2
-         CLI   N2,C'6'
-         BH    VBAD2
-VT       LA    5,TMV
-         BAL   11,NORM3
-         LTR   15,15
-         BNZ   VBAD3
-         PACK  TMPD,NORMV
-         CVB   2,TMPD
-         LTR   2,2
-         BZ    VOK
-         C     2,=F'40'
-         BL    VBAD3
-         C     2,=F'240'
-         BH    VBAD3
-VOK      MVC   TM3,NORMV
-         CLI   N1,C' '
-         BNE   VO1
-         MVC   NN,=C'00'
-         B     VO3
-VO1      CLI   N2,C' '
-         BNE   VO2
-         MVI   NN,C'0'
-         MVC   NN+1(1),N1
-         B     VO3
-VO2      MVC   NN(1),N1
-         MVC   NN+1(1),N2
-VO3      MVC   SC1,SCV
-         CLI   SCV,C' '
-         BNE   VO4
-         MVI   SC1,C'0'
-VO4      MVI   VALOK,C'Y'
+         LA    1,SCV
+         O     1,=X'80000000'       LAST (ONLY) PARAMETER
+         ST    1,VPLIST
+         LA    1,VPLIST
+         L     15,MELVEP
+         BALR  14,15
+         CLI   VRC,C'0'
+         BE    VOK
+         CLI   VRC,C'1'
+         BNE   VB2
+         MVC   MSG,MSGB1
+         B     VEND
+VB2      CLI   VRC,C'2'
+         BNE   VB3
+         MVC   MSG,MSGB2
+         B     VEND
+VB3      MVC   MSG,MSGB3
+         B     VEND
+VOK      MVI   VALOK,C'Y'
          MVC   MSG,MSGSUB
-         B     VEND
-VBAD1    MVC   MSG,MSGB1
-         B     VEND
-VBAD2    MVC   MSG,MSGB2
-         B     VEND
-VBAD3    MVC   MSG,MSGB3
 VEND     L     10,LNK1
          BR    10
 *
