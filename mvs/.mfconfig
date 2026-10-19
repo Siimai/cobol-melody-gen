@@ -1,0 +1,7 @@
+# Settings for the tk4 plugin's upload.sh (run it from this directory). No secrets.
+# melody/source/cobol/x.cbl -> MELODY.SOURCE.COBOL(X)
+MFBASE=.
+MFDSNPREFIX=
+MFJOBNAME=MELUPLD
+MFCNTL=melody/source/cntl
+MFDEFAULTPATH=melody/source
