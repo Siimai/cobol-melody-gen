@@ -14,7 +14,7 @@ cd "$(dirname "$0")"
 : "${MFPASS:?set MFPASS (or create mvs/.secrets/env)}"
 export MFUSER MFPASS MFHOST
 OUT=${1:-../gnucobol/output/melody_$(date +%Y%m%d_%H%M%S).mid}
-TK4_HOME=${TK4_HOME:-$HOME/claude-tk4}
+TK4_HOME=${TK4_HOME:-$HOME/.claude/plugins/marketplaces/claude-tk4}
 RAW=$("$TK4_HOME/scripts/tso-list.py" "$MFUSER.MELODY.${MIDIDS:-MIDI}")
 # keep only the hex records between the markers (last export in the data set)
 HEX=$(printf '%s\n' "$RAW" | awk '
