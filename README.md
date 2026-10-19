@@ -55,5 +55,5 @@ This requires `s3270` and Python 3. By default, the file is written under
 - `mvs/midi-from-mvs.sh` — retrieve and convert MIDI export
 - `gnucobol/` — separate GnuCOBOL version for macOS and Linux
 
-The GnuCOBOL version is secondary to the TK4- version. Its build and smoke
-test instructions are in [`gnucobol/README.md`](gnucobol/README.md).
+The GnuCOBOL version is secondary to the TK4- version. Build it with
+`make -C gnucobol`; run its smoke test with `bash gnucobol/tests/smoke.sh`.
