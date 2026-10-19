@@ -5,3 +5,4 @@ MFDSNPREFIX=
 MFJOBNAME=MELUPLD
 MFCNTL=melody/source/cntl
 MFDEFAULTPATH=melody/source
+MFPRT=/mnt/tk4-prt/prt00e.txt
