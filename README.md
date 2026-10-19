@@ -6,15 +6,19 @@ melody saving, and MIDI export.
 
 ## Run on TK4-
 
-You need a running TK4- Hercules system and a TSO account. At the TSO `READY`
-prompt, start the app:
+You need a running TK4- Hercules system and a TSO account. The MVS version has
+two front ends:
 
 ```text
-MELPANEL
+MELPANEL      assembler-based full-screen panel
+MELODY        line-mode menu
 ```
 
-This opens the full-screen panel. `MELODY` starts the line-mode menu. On first
-use, the app creates the user's melody data sets automatically.
+On first use, the app creates the user's melody data sets automatically.
+
+An optional KICKS front end is also available. It requires KICKS to be
+installed on TK4-. At the TSO `READY` prompt, start it with `MELOKICK`, then
+press Enter at the startup messages, press CLEAR, and enter `MELO`.
 
 ## Install or update
 
