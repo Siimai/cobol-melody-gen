@@ -1,0 +1,5 @@
+# Library -> build jobs in melody/source/cntl, for upload.sh --build.
+# SCRSUB must run before SETUP, which links the panel with its load module.
+MELODY.SOURCE.ASM: scrsub setup
+MELODY.SOURCE.COBOL: setup
+MELODY.SOURCE.CLIST: cmdproc

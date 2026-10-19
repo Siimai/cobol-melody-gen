@@ -1,7 +1,7 @@
 #!/bin/bash
 # Fetch the last MIDI export (PF7 on the panel) from the mainframe and
 # write it as a real .mid file. The panel keeps the export as hex text in
-# <user>.MELODY.MIDI; this reads it over a TSO session (tso-list.py).
+# <user>.MELODY.MIDI; this reads it over a TSO session (tso-list.py of the tk4 plugin, TK4_HOME).
 # usage: midi-from-mvs.sh [OUTFILE]
 # MIDIDS picks the data set: MIDI (default, the panel) or MIDIK (the KICKS
 # transaction MELO): MIDIDS=MIDIK midi-from-mvs.sh
@@ -14,7 +14,8 @@ cd "$(dirname "$0")"
 : "${MFPASS:?set MFPASS (or create mvs/.secrets/env)}"
 export MFUSER MFPASS MFHOST
 OUT=${1:-../gnucobol/output/melody_$(date +%Y%m%d_%H%M%S).mid}
-RAW=$(./tso-list.py "$MFUSER.MELODY.${MIDIDS:-MIDI}")
+TK4_HOME=${TK4_HOME:-$HOME/.claude/plugins/marketplaces/claude-tk4}
+RAW=$("$TK4_HOME/scripts/tso-list.py" "$MFUSER.MELODY.${MIDIDS:-MIDI}")
 # keep only the hex records between the markers (last export in the data set)
 HEX=$(printf '%s\n' "$RAW" | awk '
   /\*MIDI-BEGIN/ { buf=""; on=1; next }
