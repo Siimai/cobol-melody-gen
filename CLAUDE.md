@@ -21,7 +21,7 @@ This project targets **COBOL-85 plus the 1989 amendment (Intrinsic Function Amen
 
 ## Mainframe (Hercules / TK4-)
 
-The generic know-how (s3270 scripting, JCL, CLIST and COBOL-68 quirks, RAKF, full-screen panels, KICKS/BMS findings) and the helper scripts live in the **`tk4` Claude Code plugin** (private repo `Siimai/claude-tk4`; skills `tk4:mvs` and `tk4:project`). Use it with `claude --plugin-dir ~/claude-tk4` (clone it there; `TK4_HOME` overrides that path in `mvs/midi-from-mvs.sh`). This file keeps only what is specific to this project.
+The generic know-how (s3270 scripting, JCL, CLIST and COBOL-68 quirks, RAKF, full-screen panels, KICKS/BMS findings) and the helper scripts live in the **`tk4` Claude Code plugin** (private repo `Siimai/claude-tk4`; skills `tk4:mvs` and `tk4:project`). Install it with `/plugin install tk4 --marketplace Siimai/claude-tk4` (needs git access to the private repo, for example `gh auth setup-git`) and keep a clone at `~/claude-tk4`, because the scripts are run from there (`TK4_HOME` overrides the path). The dev container clones it on creation (`postCreateCommand`; it needs `gh auth login` first). For one session without installing: `claude --plugin-dir ~/claude-tk4`. This file keeps only what is specific to this project.
 
 A Hercules emulator running TK4- (MVS 3.8j) listens on `localhost:3270`. `s3270` is installed for scripted access, e.g. `s3270` with `Connect(localhost:3270)`.
 

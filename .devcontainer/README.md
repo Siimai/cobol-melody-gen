@@ -105,3 +105,7 @@ devcontainer up --workspace-folder . --config devcontainer.json
 
 or submodule it into a throwaway test project the same way any other
 project would.
+
+## tk4 plugin
+
+`postCreateCommand` clones the private plugin repo `Siimai/claude-tk4` to `~/claude-tk4` (the mainframe scripts are run from there). It uses the `gh` login kept in the `gh-config` volume; after the first `gh auth login`, rebuild or run `gh repo clone Siimai/claude-tk4 ~/claude-tk4` by hand.

@@ -7,6 +7,7 @@
   "containerEnv": {
     "CLAUDE_CONFIG_DIR": "/home/ubuntu/.claude"
   },
+  "postCreateCommand": "[ -d ~/claude-tk4 ] || gh repo clone Siimai/claude-tk4 ~/claude-tk4 || echo 'clone Siimai/claude-tk4 to ~/claude-tk4 after gh auth login'",
   "mounts": [
     "source=claude-config,target=/home/ubuntu/.claude,type=volume",
     "source=gh-config,target=/home/ubuntu/.config/gh,type=volume",
