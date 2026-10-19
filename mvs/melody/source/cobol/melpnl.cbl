@@ -84,6 +84,7 @@
        WORKING-STORAGE SECTION.
        77  I                   PIC S9(4) COMP.
        77  K                   PIC S9(4) COMP.
+       77  I1                  PIC S9(4) COMP.
        77  ULEN                PIC S9(4) COMP.
        77  PLEN                PIC S9(4) COMP.
        77  POS                 PIC S9(4) COMP.
@@ -494,7 +495,8 @@
            ADD 1 TO NSAV.
            MOVE SAV-REC TO SD-ENT (NSAV).
        812-SHIFT.
-           MOVE SD-ENT (I + 1) TO SD-ENT (I).
+           COMPUTE I1 = I + 1.
+           MOVE SD-ENT (I1) TO SD-ENT (I).
        813-ROW.
            MOVE SPACES TO SCR-ROW (I).
            IF I NOT > NSAV
