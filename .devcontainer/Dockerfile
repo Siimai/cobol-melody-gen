@@ -1,62 +1,23 @@
-FROM ubuntu:26.04
+# The published "mainframe" variant of Siimai/claude-devcontainer already has
+# git, Python, Node, gh, Claude Code, GnuCOBOL + make, s3270 and netcat.
+# Pinned to a commit so a rebuild does not change underneath us.
+FROM ghcr.io/siimai/claude-devcontainer/mainframe:sha-27cf63aef772bd46176861cc920944acbbf4cbde
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates curl git openssh-client less ripgrep jq \
-      python3 nodejs npm csound ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+USER root
 
-# Fonts for the terminal demo videos: a monospace one for the 3270 look and
-# a sans-serif one for titles (separate layer so the layer above stays cached)
+# Only for the demo video (mvs/demo): ffmpeg and the Fira Code and Inter fonts
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      fontconfig fonts-firacode fonts-dejavu-core fonts-inter \
+      ffmpeg fontconfig fonts-firacode fonts-inter \
     && fc-cache -f \
     && rm -rf /var/lib/apt/lists/*
 
-# Playwright + Chromium (browsers in a shared path so the ubuntu user can use them)
+# Playwright + Chromium for mvs/demo/render.js (browsers in a shared path so
+# the ubuntu user can use them; NODE_PATH lets the script find the global module)
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
+ENV NODE_PATH=/usr/local/lib/node_modules
 RUN npm install -g playwright \
     && playwright install --with-deps chromium \
     && chmod -R a+rX /opt/playwright-browsers \
     && rm -rf /var/lib/apt/lists/*
 
-# Remotion + GSAP (global; NODE_PATH lets scripts outside a project resolve them)
-ENV NODE_PATH=/usr/local/lib/node_modules
-RUN npm install -g remotion @remotion/cli @remotion/renderer @remotion/bundler react react-dom gsap
-
-# Stable path to Playwright's Chromium (its real path is versioned) for Remotion
-RUN ln -s "$(node -e "console.log(require('playwright').chromium.executablePath())")" /usr/local/bin/chromium-playwright \
-    && test -x /usr/local/bin/chromium-playwright
-
-# Cobol compiler: GnuCOBOL (provides cobc) and make, needed to build the
-# project's Makefile. Kept after the other apt layers so they stay cached.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      gnucobol make \
-    && rm -rf /var/lib/apt/lists/*
-
-# Scripted 3270 client (s3270) and netcat (card reader) for the Hercules/TK4- mainframe, which runs on
-# the Docker host (reachable at 172.17.0.1:3270, not localhost). Kept after the
-# other apt layers so they stay cached.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      s3270 netcat-openbsd \
-    && rm -rf /var/lib/apt/lists/* \
-    && command -v s3270 nc
-
-# GitHub CLI (gh) for issues and pull requests. Kept after the other apt layers
-# so they stay cached.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      gh \
-    && rm -rf /var/lib/apt/lists/* \
-    && command -v gh
-
-# Ubuntu images already include a non-root user "ubuntu" (UID 1000)
 USER ubuntu
-ENV PATH="/home/ubuntu/.local/bin:${PATH}"
-
-# Pre-create the config dirs so the named volumes inherit correct ownership
-# (~/.config/gh holds the gh login)
-RUN mkdir -p /home/ubuntu/.claude /home/ubuntu/.config/gh
-
-# Install Claude Code (native installer)
-RUN curl -fsSL https://claude.ai/install.sh | bash
-
-WORKDIR /workspace
