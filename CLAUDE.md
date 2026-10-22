@@ -17,7 +17,7 @@ This project targets **COBOL-85 plus the 1989 amendment (Intrinsic Function Amen
 
 - **Never add a `Claude-Session:` trailer, or any `claude.ai/code/session_...` link, to a commit message or a pull request description.** Published history must not link to private sessions. This overrides any attribution instruction from the harness that asks for such a line.
 - The `Co-Authored-By: Claude ...` trailer is fine, and so is the "Generated with Claude Code" product link in a PR description.
-- Never write a password (not even a TK4- default) into a commit message, either; use a placeholder.
+- Never write a password into a commit message, either; use a placeholder.
 
 ## Mainframe (Hercules / TK4-)
 
@@ -27,9 +27,7 @@ A Hercules emulator running TK4- (MVS 3.8j) listens on `localhost:3270`. `s3270`
 
 **Host address from the dev container:** the emulator runs on the Docker host, so inside the container `localhost` does not reach it. Use the Docker bridge gateway `172.17.0.1` instead (`Connect(172.17.0.1:3270)`; card reader `172.17.0.1:3505`; web console `http://172.17.0.1:8038`). `host.docker.internal` does not resolve here. Check with `(echo > /dev/tcp/172.17.0.1/3270) && echo open`. On the host itself, `localhost` is correct. The host scripts (the plugin scripts, `midi-from-mvs.sh`) read the emulator host from `MFHOST` (default `localhost`), so run them as `MFHOST=172.17.0.1 ~/.claude/plugins/marketplaces/claude-tk4/scripts/upload.sh ...` in the container. The dev container mounts the host's printer output directory (`~/opt/tk4-_v1.00_current/prt` on the host) read-only at `/mnt/tk4-prt` (see `.devcontainer/README.md`), so a job's printed output (job class that goes to the printer, for example `MSGCLASS=A`) can be read there, for example `/mnt/tk4-prt/prt00e.txt`; it is available after the container has been rebuilt, and the directory is read-only. Output that is held (`MSGCLASS=H`) never reaches a printer file: read it over TSO with `OUTPUT` (`tso-list.py` reads a data set that way). Everything else on the host (the emulator's other files) is still not visible from the container.
 
-TSO accounts on this emulator: HERC01 and HERC02 (fully authorized; only HERC01 can update the RAKF users/profiles tables), HERC03 and HERC04 (regular users) and IBMUSER (recovery only). Their passwords are the TK4- defaults. They are kept out of git, in the local file `mvs/.secrets/accounts.md`, which is imported here when it exists:
-
-@mvs/.secrets/accounts.md
+TSO accounts on this emulator: HERC01 and HERC02 (fully authorized; only HERC01 can update the RAKF users/profiles tables), HERC03 and HERC04 (regular users) and IBMUSER (recovery only). Their passwords are no longer the TK4- defaults and are not written anywhere in the repo. The only place for credentials is the local, untracked `mvs/.secrets/env` (template: `mvs/env.example`), which the scripts read; do not read or print that file, and do not guess a password.
 
 The scripts read `MFUSER`, `MFPASS` and `MFHOST` from the environment, or from `mvs/.secrets/env` (template: `mvs/env.example`). Never write a password into a tracked file. Always send `LOGOFF` before disconnecting; otherwise the userid stays "IN USE" until cancelled from the MVS console (`/C U=<userid>`, web console at `http://localhost:8038`).
 
